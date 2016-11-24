@@ -1,0 +1,46 @@
+*.class
+*.log
+src/main/scala/ch/*
+src/main/scala/com/*
+project/
+.classpath
+.cache-main
+.project
+.settings/*
+
+
+# sbt specific
+.cache
+.history
+.lib/
+dist/*
+target/
+lib/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+
+# Scala-IDE specific
+.scala_dependencies
+.worksheet
+
+# ENSIME specific
+.ensime_cache/
+.ensime
+
+.idea
+/bin/
+
+# application specific
+src/main/scala/DummyClassifier.scala
+.zip
+
+
+logres.txt
+
+ir-project-2016-1-11-lr.txt
+
+ir-project-2016-1-11-nb.txt
+
+project1_group11.zip
