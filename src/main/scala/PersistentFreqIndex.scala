@@ -2,10 +2,13 @@ import ch.ethz.dal.tinyir.indexing._
 import ch.ethz.dal.tinyir.processing._
 import ch.ethz.dal.tinyir.io._
 import java.io.File
+
 import org.iq80.leveldb._
 import org.fusesource.leveldbjni.JniDBFactory._
 import java.time.LocalDateTime
 import java.time.Duration
+
+import scala.util.Try
 
 class PersistentFreqIndex(docPath : String, nDocs : Int, dbPath : String, forceIndexRecreation : Boolean) extends InvertedIndex[FreqResult] {
   
@@ -72,8 +75,8 @@ class PersistentFreqIndex(docPath : String, nDocs : Int, dbPath : String, forceI
         val key = asString(iterator.peekNext().getKey())
         val value = asString(iterator.peekNext().getValue())
         //println(key + " / " + value)
-        var postingStringList = value.split(" ")
-        var postings = postingStringList.map(
+        val postingStringList = value.split(" ")
+        val postings = postingStringList.map(
                         psl => FreqPosting(
                                 psl.substring(1, psl.length-1).split(",")(0).toInt,
                                 psl.substring(1, psl.length-1).split(",")(1).toInt)).toList
@@ -94,10 +97,10 @@ class PersistentFreqIndex(docPath : String, nDocs : Int, dbPath : String, forceI
 object PersistentFreqIndex {
   def main(args: Array[String]) = {
 
-    var startTime = LocalDateTime.now()
+    val startTime = LocalDateTime.now()
     val nDocs = 1000
-    val docPath = "C:/Users/Michael/Desktop/IR Data/Project 2/documents/"
-    val dbPath = "C:/Users/Michael/Desktop/indexDatabase"
+    val docPath = if (args.length >= 1) args(0) else "C:/Users/Michael/Desktop/IR Data/Project 2/documents/"
+    val dbPath = if (args.length >= 2) args(1) else "C:/Users/Michael/Desktop/indexDatabase"
     //val tipsterStream = new TipsterStreamSmart(docPath, "", true, true, nDocs).stream
     //val tipsterStream = new TipsterStream(docPath).stream.dropRight(100000 - nDocs)
     //tipsterStream = tipsterStream
@@ -105,8 +108,8 @@ object PersistentFreqIndex {
     val recomputeIndex = true
     //var idx = new PersistentFreqIndex(tipsterStream, dbPath, recomputeIndex)
     var idx = new PersistentFreqIndex(docPath, nDocs, dbPath, recomputeIndex)    
-    var endTime = LocalDateTime.now()
-    var duration = Duration.between(startTime, endTime)
+    val endTime = LocalDateTime.now()
+    val duration = Duration.between(startTime, endTime)
     println("Time needed: " + duration)
   }
 }
