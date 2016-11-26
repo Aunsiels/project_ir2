@@ -6,7 +6,7 @@ import java.util.logging._
 import scala.util.{Try, Failure, Success}
 
 
-class Timer (step: Integer = 1000, heapInfo: Boolean = false, log: Logger = null) {
+case class Timer (step: Integer = 1000, heapInfo: Boolean = false, log: Logger = null) {
 
   private val start = System.nanoTime
   private var count = 0
@@ -39,5 +39,13 @@ object Timer {
 
   var _progress_count = 0
   var _progress_time = System.nanoTime
+
+  // simplify format of logging
+  System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tT %4$s %2$s: %5$s%6$s%n")
+
+  val log = Logger.getLogger("Timer")
+
+  val user = System.getProperty("user.name")
+
 
 }

@@ -4,19 +4,19 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
     
   def computeScoreForSingleQuery(query : String, nDocs : Int) {
     
-    var setOfQueryTerms = query.split(" ").toSet
+    val setOfQueryTerms = query.split(" ").toSet
     println("computing score for query terms: " + setOfQueryTerms)
     var scoreMap = Map[Int, Double]()
     setOfQueryTerms.foreach{
-      queryTerm => queryTerm
+      queryTerm =>
       val idxList = idx.index.getOrElse(queryTerm, List()) 
       if(idxList.size > 0) {
         val df = idxList.size
         val idf = math.log((nDocs / df))
         idxList.foreach{
-          idx => idx
-          var tf = idx.freq
-          var tfidf = math.log(1 + tf) * idf
+          idx =>
+          val tf = idx.freq
+          val tfidf = math.log(1 + tf) * idf
           scoreMap += idx.id -> (scoreMap.getOrElse(idx.id, 0.0) + tfidf) 
         }
         
