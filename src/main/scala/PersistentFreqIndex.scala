@@ -6,21 +6,23 @@ import org.iq80.leveldb._
 import org.fusesource.leveldbjni.JniDBFactory._
 import java.time.LocalDateTime
 import java.time.Duration
+import scala.collection.mutable.HashMap
 
 class PersistentFreqIndex(docPath : String, nDocs : Int, dbPath : String, forceIndexRecreation : Boolean) extends InvertedIndex[FreqResult] {
-  
-  //docs: Stream[Document]
-  
+      
   case class FreqPosting(val id: Int, val freq: Int) extends Ordered[FreqPosting] {
     def compare(that: FreqPosting) = this.id compare that.id
   }
   type PostList = List[FreqPosting] 
-  
+    
   val index : Map[String,PostList] = {
     //if db does not exist or if we force a recreation
     if(forceIndexRecreation) {
-      val docs = new TipsterStreamSmart(docPath, "", true, true, nDocs).stream 
+       println("creation of inverted index started")
+      val docs = new TipsterStreamSmart(docPath, "", true, true, nDocs).stream
+      //val docs = new TipsterStream(docPath).stream.dropRight(100000 - nDocs)
       val groupedTuples = postings(docs).groupBy(_.term)
+      println("inverted index created")
       groupedTuples.mapValues(_.map(tfT => FreqPosting(tfT.doc, tfT.count)).sorted)
     } 
     //otherwise: load db content into memory
@@ -29,6 +31,11 @@ class PersistentFreqIndex(docPath : String, nDocs : Int, dbPath : String, forceI
     }
   }
   //println(index)
+  
+  
+  val namesMap = new HashMap[Int, String]()
+  var docNames = new TipsterStreamSmart(docPath, "", true, true, nDocs).stream.map(doc => doc.name).toList
+  docNames.foreach { dn => namesMap.put(dn.hashCode(), dn) }
  
   //if index was recreated, need to persist it again
   if(forceIndexRecreation) {
@@ -47,7 +54,7 @@ class PersistentFreqIndex(docPath : String, nDocs : Int, dbPath : String, forceI
     println("storing inverted index in db started")
     val options = new Options();
     options.createIfMissing(true);
-    val db = factory.open(new File(dbPath), options);
+    val db = factory.open(new File(dbPath + "dbWithIndexOf"+nDocs+"Docs"), options);
     try {
       this.index.foreach{ 
         case (d,lst) => 
@@ -58,7 +65,7 @@ class PersistentFreqIndex(docPath : String, nDocs : Int, dbPath : String, forceI
     }
     println("inverted index stored in db")
   }
-  
+    
   def recreateIndexFromDisk() : Map[String, PostList] = {
     println("recreating inverted index from db started")
     var index = Map[String,PostList]()
@@ -89,15 +96,23 @@ class PersistentFreqIndex(docPath : String, nDocs : Int, dbPath : String, forceI
     //println(index)
     index
   }
+  
+  def getAmountOfDocsInIndex() : Int = {
+    this.index.map(index => index._2.map(fp => fp.id)).flatten.toSet.size
+  }
+  
+  def getDocsInIndex() : Set[Int] = {
+    this.index.map(index => index._2.map(fp => fp.id)).flatten.toSet
+  }
 }
 
 object PersistentFreqIndex {
   def main(args: Array[String]) = {
 
     var startTime = LocalDateTime.now()
-    val nDocs = 1000
+    val nDocs = 10000
     val docPath = "C:/Users/Michael/Desktop/IR Data/Project 2/documents/"
-    val dbPath = "C:/Users/Michael/Desktop/indexDatabase"
+    val dbPath = "C:/Users/Michael/Desktop/indexDatabases/"
     //val tipsterStream = new TipsterStreamSmart(docPath, "", true, true, nDocs).stream
     //val tipsterStream = new TipsterStream(docPath).stream.dropRight(100000 - nDocs)
     //tipsterStream = tipsterStream
