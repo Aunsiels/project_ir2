@@ -5,41 +5,45 @@ import scala.collection.JavaConversions._
 
 class TipsterStreamSmart(path: String, 
                          ext: String = "",
-                         stopWords: Boolean = false, 
-                         stemming: Boolean = false, 
-                         maxDocs: Int = Int.MaxValue ) extends TipsterStream(path, ext) {
-  
+                         stopWords: Boolean = true,
+                         stemming: Boolean = true,
+                         maxDocs: Integer = Int.MaxValue,
+                         frequencies: Boolean = false) extends TipsterStream(path, ext) {
+
   override def stream : Stream[TipsterParseSmart] =
     unparsed.stream.slice(0, maxDocs).map(is => new TipsterParseSmart(is, stopWords, stemming))
+
+
+  /**
+    * compute the term frequency of all documents in this stream
+    * @param progress
+    * @return
+    */
+  def docFrequencies(progress: Boolean = false): Map[String, Int] = {
+    val df = collection.mutable.Map[String, Int]()
+    val t = Timer(step = 500, heapInfo = true)
+    for (doc <- stream) {
+      if (progress) t.progress(s"${doc.ID}, ${doc.name}")
+      df ++= doc.tokens.distinct.map(tok => tok -> (1 + df.getOrElse(tok, 0)))
+    }
+    println(s"completed in ${t.elapsed()} secs")
+    df.toMap
+  }
+
 }
 
 object TipsterStreamSmart {
 
-  def testVocabulary(dir: String, stopWords: Boolean, stemming: Boolean): Unit = {
-    val t = new Timer(heapInfo = true)
-    println(s"heap ${Timer.freeMB()}, stopwords=$stopWords, stemming=$stemming")
-    val stream = new TipsterStreamSmart(dir, stopWords = stopWords, stemming = stemming)
-    var vocabularyAll = collection.mutable.Set[String]()
-    var totalTokens = 0
-    var rawVocabulary = collection.mutable.Set[String]()
-
-    val vocabulary = stream.stream.foreach(x => {
-      vocabularyAll = vocabularyAll union x.vocabulary
-      totalTokens += x.tokens.size
-      t.progress(s"${x.title}, ${vocabularyAll.size}")
-    })
-    println(s"nof distinct words ${vocabularyAll.size}, totalTokens ${totalTokens}")
-  }
-
-
   def main(args: Array[String]): Unit = {
-    //val dir = "/Users/mmgreiner/Projects/InformationRetrieval/data/score2/train/"
-    val dir = "C:/Users/Michael/Desktop/IR Data/Project 2/documents/"
-    
-    /*testVocabulary(dir, false, false)
-    System.gc
-    testVocabulary(dir, true, false)
-    System.gc*/
-    testVocabulary(dir, true, true)
+    val path = InputFiles(args).DocPath
+    println(s"Testing ${TipsterParseSmart.getClass.getName} with $path")
+    val stream = new TipsterStreamSmart(path, frequencies = true)
+    val t = Timer()
+    val df = stream.docFrequencies(true)
+    println(s"elapsed for frequencies ${t.elapsed()}, number of tokens ${df.size}")
+    val sorted = df.toSeq.sortWith(_._2 > _._2)
+    println(s"top frequencies ${sorted.slice(0, 20)}")
+    println(s"ID hashes ${TipsterParseSmart.nameHash.slice(0,20)}")
+
   }
 }

@@ -23,3 +23,10 @@ In terms of term-based model I thought about computing scores like described on 
 - Markus: Performance StreamSmart
 
 
+## splitting zip files
+
+The problem with too many files is that you cannot use bash wild cards, since there will be too many
+arguments. `xargs` can be used to solve this problems.
+
+    $ ls | grep PT | xargs zip -X pt.zip
+    $ ls | grep PT | xargs rm

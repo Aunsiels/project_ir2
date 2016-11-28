@@ -1,71 +1,34 @@
-import ch.ethz.dal.tinyir.processing.TipsterParse
+import ch.ethz.dal.tinyir.processing.{TipsterParse, Tokenizer}
 import java.io.InputStream
+
 import ch.ethz.dal.tinyir.io.DocStream
 import com.github.aztek.porterstemmer.PorterStemmer
 
 class TipsterParseSmart(is: InputStream, 
-                        reduceStopWords: Boolean = false, 
-                        stemming: Boolean = false) extends TipsterParse(is) {
+                        reduceStopWords: Boolean = true,
+                        stemming: Boolean = true) extends TipsterParse(is) {
 
-  val raw_tokens = super.tokens
-  
   override def ID = this.name.hashCode()
-  
-  private val replace = (word: String, tup: Tuple2[util.matching.Regex, String]) => tup._1.replaceAllIn(word, tup._2)
 
-  private def tokenize(words: List[String]): List[String] = {
-    words.flatMap(x => {
-      var t = x
-      t = replace(t, TipsterParseSmart.rLine)
-      t = replace(t, TipsterParseSmart.rUSPhone)
-      t = replace(t, TipsterParseSmart.rDate)
-      t = replace(t, TipsterParseSmart.rNumber)
-      t = replace(t, TipsterParseSmart.rTwoNum)
-      t = replace(t, TipsterParseSmart.rOrdinal)
-      t = replace(t, TipsterParseSmart.rPunct)
+  override def tokens = TipsterParseSmart.tokenize(content, reduceStopWords, stemming)
 
-      if (reduceStopWords)
-        t = replace(t, TipsterParseSmart.rStop)
-      if (stemming)
-        t = PorterStemmer.stem(t)
+  // remember hash codes
+  TipsterParseSmart.nameHash += ID -> name
 
-      if (reduceStopWords)
-        t = replace(t, TipsterParseSmart.rFreqWords)
-
-      t.replaceAll("\\s", " ")
-        .split(" ")
-    })
-      .filterNot(_=="")
-  }
-
-  private var _smartTokens: List[String] = _
-
-  override def tokens = {
-    if (_smartTokens == null)
-      _smartTokens = tokenize(raw_tokens)
-    _smartTokens
-  }
-
-  val vocabulary = tokens.toSet
-
-
-
-  def test(stream: TipsterStreamSmart, howMany: Integer = 5000): Unit = {
-    val docs = stream.stream.slice(0, howMany)
-    val rawset = raw_tokens.toSet
-    println(s"nof raw_tokens ${raw_tokens.size}, nof smart token ${tokens.size}, ${vocabulary.size}")
-  }  
 }
 
 object TipsterParseSmart {
+
+  val nameHash = collection.mutable.Map[Int, String]()
+
   // regular expressions defined statically
   val rDate = ("^\\d+[/-]\\d+[/-]\\d+$".r, "<DATE>")
   val rUSPhone = ("^\\d{3}\\W\\d+{3}\\W\\d{4}$".r -> "<USPHONE>")
-  val rNumber = ("^[-]?\\d+([.,]\\d+)*$".r -> "<NUMBER>")
+  val rNumber = ("^[-]?\\d+([.,]\\d+)*$|^(one|two|three|four)$".r -> "<NUMBER>")
   val rTwoNum = ("^\\d+[-/=]\\d+$".r -> "<TUMBER>")
   val rOrdinal = ("^\\d+(th|1st|2nd|3rd)$".r -> "<ORDINAL>")
-  val rPunct = ("[,;.:]$".r -> " <PUNCT>")      // if it is like "end.", should return "end <PUNCT>"
-  val rLine = ("--+".r -> "")                   // underlines like -----------
+  val rLine = "--+".r -> ""                   // underlines like -----------
+  val rQuote = """['\"\x60]+""".r -> ""          // also ` = x60
 
   /**
     * Stopwords is taken from nltk toolkit stopwords - english.
@@ -226,37 +189,68 @@ object TipsterParseSmart {
     "won",
     "wouldn"
   )
-  val rStop = Stopwords.mkString("^(", "|", ")$").r -> "<STOP>"
 
   val HighFreqWords = List(
-    //"share",     // -> 32117,
-    //"bank",      // -> 30300,
-    //"million",   // -> 45624,
-    "would",     // -> 35039,
-    //"percent",   //  -> 53790,
-    "year",      //  -> 40026,
-    //"market",    // -> 35931,
-    "said",      // -> 155872,
-    "new"        // -> 33655
+    "would",
+    "could",
+    "said",
+    "new",
+    "on",
+    "ones",
+    "also"
   )
-  val rFreqWords = HighFreqWords.mkString("^(", "|", ")$").r -> "<HIFREQ>"
+
+  val rStop = (HighFreqWords ::: Stopwords).mkString("^(", "|", ")$").r -> "<STOP>"
+
+  private val replace = (word: String, tup: (util.matching.Regex, String)) => tup._1.replaceAllIn(word, tup._2)
+
+  // replace lines and quotes right at the beginning
+  private val trim = (word: String) => replace(replace(word, rQuote), rLine).replaceAll("""\x60+""", "")
+
+
+  private def tokenize(text: String,
+                       reduceStopWords: Boolean = true,
+                       stemming: Boolean = true): List[String] = {
+    text.split("[ .,;:?!*&$-+\\s]+")
+      .filter(_.length >= 3)
+      .map(x => {
+        /*
+        // there are many misspellings around and, like andi for "and i" or "anda" for "and a".
+        // however, there may be names like this also.
+        if ((x matches("and\\w")) && (x != "andy")) {
+          val i = words.indexOf(x)
+          println(s"hit and?: $x in ${words.slice(i - 5, i + 5)}")
+        }
+        */
+
+        var t = trim(x.toLowerCase)
+        if (t.length > 0) {
+          t = replace(t, rUSPhone)
+          t = replace(t, rDate)
+          t = replace(t, rNumber)
+          t = replace(t, rTwoNum)
+          t = replace(t, rOrdinal)
+
+          if (reduceStopWords)
+            t = replace(t, rStop)
+          if (stemming && t(0) != "<")
+            t = PorterStemmer.stem(t)
+        }
+        t
+    }).filter(_.length > 0).toList
+  }
+
 
   def main(args: Array[String]) {
 
-    //val dir = "/Users/mmgreiner/Projects/InformationRetrieval/data/score2/train-orig/"
-    //val fname = dir + "100009newsML.xml"
-
-    val dir = "C:/Users/Michael/Desktop/IR Data/Project 2/"
-    val fname = dir + "AP880212-0006"
+    val inf = InputFiles(args)
+    val fname = inf.DocPath + "AP880212-0006"
     
-    val parse = new TipsterParseSmart(DocStream.getStream(fname), reduceStopWords = true, stemming = true)
+    val parse = new TipsterParseSmart(DocStream.getStream(fname))
     val title = parse.title
     println(title)
     println("DocID = " + parse.ID)
     println("Date  = " + parse.date)
-    println("Codes = " + parse.codes.mkString(" "))
-    println("raw_tokens = " + parse.raw_tokens)
-    println(s"raw  set size ${parse.raw_tokens.size}")
     println("tokens = " + parse.tokens)
     println(s"tokenset size ${parse.tokens.toSet.size}")
 

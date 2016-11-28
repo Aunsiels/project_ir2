@@ -13,7 +13,7 @@ case class Timer (step: Integer = 1000, heapInfo: Boolean = false, log: Logger =
 
   val Count = () => count
 
-  val elapsed = () => f"${(System.nanoTime.toDouble - start) / 1000000000.0}%6.2f"
+  def elapsed() = f"${(System.nanoTime.toDouble - start) / 1000000000.0}%6.2f"
 
   def info (msg: String) {
     var message = f"$count%5.0f ${elapsed()}"
@@ -36,6 +36,8 @@ object Timer {
   val freeMB = () => runtime.freeMemory().toDouble / 1000000.0
 
   val totalMB = () => runtime.totalMemory().toDouble / 1000000.0
+
+  val availMB = () => totalMB() - freeMB()
 
   var _progress_count = 0
   var _progress_time = System.nanoTime

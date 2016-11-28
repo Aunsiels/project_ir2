@@ -1,0 +1,40 @@
+/**
+  * Created by mmgreiner on 28.11.16.
+  */
+
+
+
+/**
+  * special class that provides the paths to the testing files dependent on user
+  * @param args if args are given, take the document directory as args(0) and database filename aas args(1)
+  * @param documents directory with the documents. If not given, take default of this user
+  * @param database database file. If not given, take default of this user
+  */
+case class InputFiles(args: Array[String] = Array(), documents: String = "", database: String = "") {
+
+  private val user = System.getProperty("user.name")
+
+  def Docs(key: String): String = InputFiles.defaultFiles.getOrElse(user, InputFiles.defaultFiles("default"))(key)
+
+  val DocPath = if (args.length >= 1) args(0) else Docs("documents")
+  val Database = if (args.length >= 2) args(1) else Docs("database")
+
+}
+
+object InputFiles {
+  val defaultFiles = Map(
+    "Michael" ->
+      Map("database" -> "",
+        "documents" -> "C:/Users/Michael/Desktop/IR Data/Project 2/"),
+    "mmgreiner" ->
+      Map("database" -> ".",
+        "documents" -> "./data/documents/",
+        "docs_pt" -> "./data/ptdocuments/",
+        "docs_ap" -> "./data/APdocuments/"),
+    "julien" ->
+      Map("database" -> "", "documents" -> "./data/documents/"),
+    "default" ->
+      Map("documents" -> "./data/documents/", "database" -> ".database")
+  )
+
+}
