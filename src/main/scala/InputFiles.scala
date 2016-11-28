@@ -5,7 +5,16 @@
 
 
 /**
-  * special class that provides the paths to the testing files dependent on user
+  * special class that provides the paths to the testing files dependent on user.
+  *
+  * Sample usage:
+  * {{{
+  *   val inf = InputFiles(args)
+  *   val path = inf.DocPath    // document path, either taken from args(0) or from default values
+  *   val db = inf.DataBase     // database name, either taken from args(1) or from default values
+  *   val testdir = inf.Docs("testdir") // path to test directory as stored in the default values
+  * }}}
+  *
   * @param args if args are given, take the document directory as args(0) and database filename aas args(1)
   * @param documents directory with the documents. If not given, take default of this user
   * @param database database file. If not given, take default of this user
