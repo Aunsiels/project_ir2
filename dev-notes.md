@@ -30,3 +30,25 @@ arguments. `xargs` can be used to solve this problems.
 
     $ ls | grep PT | xargs zip -X pt.zip
     $ ls | grep PT | xargs rm
+    
+
+## Time comparison
+
+  Task | # Docs | TipsterStream | TipsterSmartStream |
+|-----|-------:|-------:|--------:|
+| `map(ID, name)` | 100'000 | 77.49 sec | 43.95 sec |
+| `map(ID, name)` | 100'000 | 56.83 sec | 38.63 sec |
+|`map(ID, tokens.length` | 100'000 | 111.47 sec | 2874.48 secs |
+
+ 
+## Memory usage
+
+see http://alvinalexander.com/scala/how-to-use-stream-class-lazy-list-scala-cookbook:
+
+
+However, be careful with methods that aren’t transformers. Calls to the following strict methods are evaluated 
+immediately and can easily cause `java.lang.OutOfMemoryError errors:
+- stream.max
+- stream.size
+- stream.sum
+
