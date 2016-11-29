@@ -23,8 +23,8 @@ class TipsterStreamSmart(path: String,
     val df = collection.mutable.Map[String, Int]()
     val t = Timer(step = 500, heapInfo = true)
     for (doc <- stream) {
-      if (progress) t.progress(s"${doc.ID}, ${doc.name}")
-      df ++= doc.tokens.distinct.map(tok => tok -> (1 + df.getOrElse(tok, 0)))
+      val h = doc.termFrequencies.headOption
+      if (progress) t.progress(s"${doc.ID}, ${doc.name}, $h")
     }
     println(s"completed in ${t.elapsed()} secs")
     df.toMap
