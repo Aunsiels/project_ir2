@@ -12,6 +12,8 @@ class TipsterParseSmart(is: InputStream,
 
   override def tokens = TipsterParseSmart.tokenize(content, reduceStopWords, stemming)
 
+  def termFrequencies = TipsterParseSmart.termFrequencies(content)
+
   // remember hash codes
   TipsterParseSmart.nameHash += ID -> name
 
@@ -208,20 +210,22 @@ object TipsterParseSmart {
   private val trim = (word: String) => replace(replace(word, rQuote), rLine).replaceAll("""\x60+""", "")
 
 
-  private def tokenize(text: String,
+  /**
+    * Tokenizes the given text. Replaces numbers and dates by special tokens <NUMBER>, <TNUMBER> (= two numbers 9/11),
+    * <ORDINAL> (like 1st, 2nd, ..), <DATE>
+    * @param text the text to be tokenized
+    * @param reduceStopWords should stopswords be replaced by <STOP>? default yes
+    * @param stemming should PorterStemmer be applied? default yes
+    * @return
+    */
+  def tokenize(text: String,
                        reduceStopWords: Boolean = true,
                        stemming: Boolean = true): List[String] = {
     text.split("[ .,;:?!*&$-+\\s]+")
       .filter(_.length >= 3)
       .map(x => {
-        /*
         // there are many misspellings around and, like andi for "and i" or "anda" for "and a".
         // however, there may be names like this also.
-        if ((x matches("and\\w")) && (x != "andy")) {
-          val i = words.indexOf(x)
-          println(s"hit and?: $x in ${words.slice(i - 5, i + 5)}")
-        }
-        */
 
         var t = trim(x.toLowerCase)
         if (t.length > 0) {
@@ -238,6 +242,38 @@ object TipsterParseSmart {
         }
         t
     }).filter(_.length > 0).toList
+  }
+
+  def termFrequencies(text: String,
+               reduceStopWords: Boolean = true,
+               stemming: Boolean = true): Stream[(String, Int)] = {
+    val tf = collection.mutable.Map[String, Int]()
+
+    text.split("[ .,;:?!*&$-+\\s]+")
+      .filter(_.length >= 3)
+      .foreach(x => {
+        // there are many misspellings around and, like andi for "and i" or "anda" for "and a".
+        // however, there may be names like this also.
+
+        var t = trim(x.toLowerCase)
+        if (t.length > 0) {
+          t = replace(t, rUSPhone)
+          t = replace(t, rDate)
+          t = replace(t, rNumber)
+          t = replace(t, rTwoNum)
+          t = replace(t, rOrdinal)
+
+          if (reduceStopWords)
+            t = replace(t, rStop)
+          if (stemming && t(0) != "<")
+            t = PorterStemmer.stem(t)
+
+          // now update frequencies
+          if (t.length > 0)
+            tf += t -> (1 + tf.getOrElse(t, 1))
+        }
+      })
+    tf.toStream
   }
 
 
