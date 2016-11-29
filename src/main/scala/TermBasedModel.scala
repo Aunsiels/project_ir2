@@ -44,15 +44,6 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
     println("computing score for query terms: " + queryTermFrequency)
     var cosineDistanceMap = Map[Int, Double]()
     
-<<<<<<< HEAD
-  def computeScoreForSingleQuery(query : String, nDocs : Int) {
-    
-    val setOfQueryTerms = query.split(" ").toSet
-    println("computing score for query terms: " + setOfQueryTerms)
-    var scoreMap = Map[Int, Double]()
-    setOfQueryTerms.foreach{
-      queryTerm =>
-=======
     var queryVectorNorm = 0.0
     queryTermFrequency.foreach{
       queryTerm => 
@@ -90,21 +81,14 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
     var scoreMap = Map[Int, Double]()
     listOfQueryTerms.foreach{
       queryTerm => 
->>>>>>> origin/master
       val idxList = idx.index.getOrElse(queryTerm, List()) 
       if(idxList.size > 0) {
         val df = idxList.size
         val idf = math.log((nDocs / df))
         idxList.foreach{
-<<<<<<< HEAD
-          idx =>
-          val tf = idx.freq
-          val tfidf = math.log(1 + tf) * idf
-=======
           idx => 
           var tf = idx.freq
           var tfidf = math.log(1 + tf) * idf
->>>>>>> origin/master
           scoreMap += idx.id -> (scoreMap.getOrElse(idx.id, 0.0) + tfidf) 
         }
       }      
@@ -121,11 +105,14 @@ object TermBasedModel {
         
     val nDocs = 1000
     val docPath = "C:/Users/Michael/Desktop/IR Data/Project 2/documents/"
-    val dbPath = "C:/Users/Michael/Desktop/indexDatabases/dbWithIndexOf1000Docs"
+    val dbPath = "C:/Users/Michael/Desktop/indexDatabases/dbWithIndexOf2Docs"
     //val tipsterStream = new TipsterStream(docPath).stream.dropRight(100000 - nDocs)   
+    val tipsterStream = new TipsterStreamSmart(docPath, "", true, true, nDocs)
     val recomputeIndex = false
-    //var idx = new PersistentFreqIndex(null, dbPath, recomputeIndex)
-    var idx = new PersistentFreqIndex(docPath, nDocs, dbPath, recomputeIndex)  
+    var batchSize = 1000
+    var appendBatchesToDB = false
+    var idx = new PersistentFreqIndex(tipsterStream.stream, dbPath, recomputeIndex, batchSize, appendBatchesToDB)
+    //var idx = new PersistentFreqIndex(docPath, nDocs, dbPath, recomputeIndex)  
     val dirname = "C:/Users/Michael/Desktop/IR Data/Project 2"
     val fname = dirname + "/questions-descriptions.txt"
     val queryParse = new QueryParse(fname)    
@@ -137,14 +124,18 @@ object TermBasedModel {
     
     termModel.computeTfIdfScoresForQuery(sampleQuery)
     
-    var scores1 = termModel.getTfIdfScores(queryParse.queries)
-    var scores1WithDocNames = scores1.mapValues(scores => scores.map(docIdScore => (idx.namesMap(docIdScore._1), docIdScore._2)))
+    //println(tipsterStream.nameHash)
+    
+    /*var scores1 = termModel.getTfIdfScores(queryParse.queries)
+    var scores1WithDocNames = scores1.mapValues(scores => scores.map(docIdScore => (tipsterStream.nameHash(docIdScore._1), docIdScore._2)))
+    
+    
     println(scores1WithDocNames)
     
     termModel.computeCosineDistancesForQuery(sampleQuery)
     
     var scores2 = termModel.getCosineDistances(queryParse.queries)
-    var scores2WithDocNames = scores2.mapValues(scores => scores.map(docIdScore => (idx.namesMap(docIdScore._1), docIdScore._2)))
+    var scores2WithDocNames = scores2.mapValues(scores => scores.map(docIdScore => (tipsterStream.nameHash(docIdScore._1), docIdScore._2)))
     println(scores2WithDocNames)
     
     var docNames2 = scores2WithDocNames.mapValues(scores => scores.map(scores => scores._1).toSet)
@@ -156,7 +147,7 @@ object TermBasedModel {
         //println(queryIdDocs._2)
         var stat = Evaluation.getStat(queryIdDocs._2, relelvanceParse.getRelevantDocsForQuery(queryIdDocs._1.toInt), 1)
         println(stat)
-    }
+    }*/
     
     println("finished")
         
