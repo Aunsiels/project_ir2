@@ -31,24 +31,60 @@ arguments. `xargs` can be used to solve this problems.
     $ ls | grep PT | xargs zip -X pt.zip
     $ ls | grep PT | xargs rm
     
+## Topics
+
+The Wall Street Journal articles have topics in the `<NS>` tag. Maybe we can use this.
+
+    <?xml version='1.0' encoding='UTF-8'?>
+    <DOC>
+        <DOCNO>WSJ911015-0039</DOCNO>
+        <DOCID>911015-0039.</DOCID>
+        <HL>Labor Letter: A Special News Report on People And Their Jobs in Offices, Fields and Factories ---- By
+            Christopher Conte
+        </HL>
+        <DATE>10/15/91</DATE>
+        <SO>WALL STREET JOURNAL (J), PAGE A1</SO>
+        <CO>BAC LABOR SPC</CO>
+        <MS>FINANCIAL (FIN)INDUSTRIAL (IDU)CONSUMER NON-CYCLICAL (NCY)</MS>
+        <IN>MAJOR MONEY CENTER BANKS (BAN)ALL REGIONAL BANKS (BAR)WESTERN U.S. BANKS (BAW)ALL BANKS, BANKING NEWS AND ISSUES
+            (BNK)CDS, INTEREST RATES, COMMERCIAL PAPER (FIN)HEALTH CARE PROVIDERS, MEDICINE, DENTISTRY (HEA)INDUSTRIAL
+            andamp; COMMERCIAL SERVICES, LEASING, CLEANING (ICS)LAW AND LEGAL AFFAIRS (LAW)INDUSTRIAL AND COMMERCIAL
+            SERVICES (SVC)TENDER OFFERS, MERGERS, ACQUISITIONS (TNM)
+        </IN>
+        <NS>LABOR, UNIONS, STRIKES, WAGES, RECRUITMENT (LAB)LAW andamp; LEGAL ISSUES AND LEGISLATION (LAW)MANAGEMENT ISSUES
+            (MNT)ACQUISITIONS andamp; MERGERS, TAKEOVERS, BOARD BATTLES (TNM)
+        </NS>
+            <GV>FEDERAL GOVERNMENT (FDL)LABOR DEPARTMENT (LBR)</GV>
+            <RE>CALIFORNIA (CA)NORTH AMERICA (NME)PACIFIC RIM (PRM)UNITED STATES (US)</RE>
+            <LP>PRECEDENT PENDING: Employee involvement programs facelegal hurdles. Dozens of cases heading toward the National
+                LaborRelations Board will test whether self-directed work teams,quality circles and other joint labor-management
+                groups areallowed under federal labor law. Such groups were designed toincrease worker participation and improve
+                product quality,but some believe they run afoul of workers' right to formindependent labor organizations.
+            </LP>
+            <TEXT>A strict interpretation of the National Labor RelationsAct could force employers to disband 90% of existing
+                groups,warns Washington attorney Robert Hunter. A case involving&quot;action committees&quot; established by
+
 
 ## Time comparison
 
-  Task | # Docs | TipsterStream | TipsterSmartStream |
-|-----|-------:|-------:|--------:|
-| `map(ID, name)` | 100'000 | 77.49 sec | 43.95 sec |
-| `map(ID, name)` | 100'000 | 56.83 sec | 38.63 sec |
-|`map(ID, tokens.length` | 100'000 | 111.47 sec | 2874.48 secs |
+All times measured on Markus's MacBook Air with 4GB max heap.
+
+  Task |  Task | # Docs | TipsterStream | TipsterSmartStream |
+|-----|-----|-------:|-------:|--------:|
+| `PerformanceParseSmart` | `map(ID, name)` | 100'000 | 77.49 sec | 43.95 sec |
+| `PerformanceParseSmart` | `map(ID, name)` | 100'000 | 56.83 sec | 38.63 sec |
+| `PerformanceParseSmart` |`map(ID, tokens.length)` | 100'000 | 111.47 sec | 2874.48 secs |
+| `TipsterStreamSmart` |`foreach(_.termFrequencies.headOption)` | 50'000 | -  | 320 secs |
+| `TipsterStreamSmart` |`foreach(_.termFrequencies.headOption)` | 100'000 | - | 1336.06 secs |
 
  
 ## Memory usage
 
 see http://alvinalexander.com/scala/how-to-use-stream-class-lazy-list-scala-cookbook:
 
-
 However, be careful with methods that aren’t transformers. Calls to the following strict methods are evaluated 
-immediately and can easily cause `java.lang.OutOfMemoryError errors:
+immediately and can easily cause `java.lang.OutOfMemoryError` errors:
 - stream.max
 - stream.size
-- stream.sum
+- stream.sum`
 
