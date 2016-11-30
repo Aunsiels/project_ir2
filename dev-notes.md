@@ -69,14 +69,17 @@ The Wall Street Journal articles have topics in the `<NS>` tag. Maybe we can use
 
 All times measured on Markus's MacBook Air with 4GB max heap.
 
-  Task |  Task | # Docs | TipsterStream | TipsterSmartStream |
+  Class |  Task | # Docs | TipsterStream | SmartStream |
 |-----|-----|-------:|-------:|--------:|
-| `PerformanceParseSmart` | `map(ID, name)` | 100'000 | 77.49 sec | 43.95 sec |
-| `PerformanceParseSmart` | `map(ID, name)` | 100'000 | 56.83 sec | 38.63 sec |
+| `PerformanceParseSmart` |`map(ID, name)`| 100'000 | 77.49 sec | 43.95 sec |
+| `PerformanceParseSmart` |`map(ID, name)`| 100'000 | 56.83 sec | 38.63 sec |
 | `PerformanceParseSmart` |`map(ID, tokens.length)` | 100'000 | 111.47 sec | 2874.48 secs |
 | `TipsterStreamSmart` |`foreach(_.termFrequencies.headOption)` | 50'000 | -  | 320 secs |
 | `TipsterStreamSmart` |`foreach(_.termFrequencies.headOption)` | 100'000 | - | 1336.06 secs |
-
+| `PersistentFreqIndex` |`index += term > FreqPosting(id, freq) :: index.getOrElse(term, List[FreqPosting]())`| 100'000 | - | - secs |
+ 
+ In general, here is a good cheat-sheet about the 
+ [performance of collections](http://docs.scala-lang.org/overviews/collections/performance-characteristics.html).
  
 ## Memory usage
 

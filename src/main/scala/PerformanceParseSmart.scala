@@ -6,32 +6,30 @@
   * Class to test the performance of TipsterParseSmart
   */
 
-import ch.ethz.dal.tinyir.io.TipsterStream
+import ch.ethz.dal.tinyir.io.{ParsedXMLStream, TipsterStream}
 import ch.ethz.dal.tinyir.processing.XMLDocument
 
 object PerformanceParseSmart {
   def main(args: Array[String]): Unit = {
 
-    val bare = false
+    val bare, smart = true
     val inf = InputFiles(args)
     println(s"working on ${inf.DocPath}")
 
     if (bare) {
-      val t1 = new Timer()
-      System.gc()
-      println(s"dumb Stream...free ${Timer.freeMB()} MB, max ${Timer.totalMB()} MB")
-      var dumbStream = new TipsterStream(inf.DocPath)
-      val names = dumbStream.stream.map(x => (x.title, x.ID))
-      val len = dumbStream.length
-      println(s"dumb stream, size $len in ${t1.elapsed()} sec, free ${Timer.freeMB()} MB")
-
-      val df1 = doc_freq(dumbStream.stream, progress = true)
-      val sorted = df1.toSeq.sortWith(_._2 > _._2)
-      println(s"size: ${sorted.size}, top: ${sorted.slice(0, 20)}")
-
-      dumbStream = null
+      var docs = new TipsterStream(inf.DocPath)
+      TimeStream(docs)
+      docs = null
+      System.gc
     }
-    System.gc
+    if (smart) {
+      var docs = new TipsterStreamSmart(inf.DocPath)
+      TimeStream(docs)
+      docs = null
+      System.gc
+    }
+
+    return
 
     println(s"smart/slow Stream...free ${Timer.freeMB()} MB, max ${Timer.totalMB()} MB")
     val t3 = Timer()
@@ -46,6 +44,21 @@ object PerformanceParseSmart {
     val sorted = df2.toSeq.sortWith(_._2 > _._2)
     println(s"size: ${sorted.size}, top: ${sorted.slice(0, 20)}")
   }
+
+  def TimeStream(docs: TipsterStream): Unit = {
+    val t = new Timer(heapInfo = true)
+    System.gc()
+    val streamName = docs.getClass.getName
+    println(s"$streamName: ...free ${Timer.freeMB()} MB, max ${Timer.totalMB()} MB")
+    val names = docs.stream.map(x => {
+      t.progress(s"${x.ID}, ${x.name}")
+      (x.ID, x.name, x.tokens.length)
+    }).sortBy(_._2)
+    val len = names.length
+    println(s"${streamName}, size $len in ${t.elapsed()} sec, free ${Timer.freeMB()} MB")
+    println(s"sorted is ${names.slice(0, 20)}")
+  }
+
 
   def doc_freq(stream: Stream[XMLDocument], progress: Boolean = false): Map[String, Int] = {
     val df = collection.mutable.Map[String, Int]()
