@@ -76,11 +76,22 @@ All times measured on Markus's MacBook Air with 4GB max heap.
 | `PerformanceParseSmart` |`map(ID, tokens.length)` | 100'000 | 111.47 sec | 2874.48 secs |
 | `TipsterStreamSmart` |`foreach(_.termFrequencies.headOption)` | 50'000 | -  | 320 secs |
 | `TipsterStreamSmart` |`foreach(_.termFrequencies.headOption)` | 100'000 | - | 1336.06 secs |
-| `PersistentFreqIndex` |`index += term > FreqPosting(id, freq) :: index.getOrElse(term, List[FreqPosting]())`| 100'000 | - | - secs |
+| `PersistentFreqIndex` |`index += term > FreqPosting(id, freq) :: index.getOrElse(term, List[FreqPosting]())`| 100'000 | - | 5336.33 secs |
+| `PersistentFreqIndex` |`index += term > FreqPosting(id, freq) :: index.getOrElse(term, List[FreqPosting]())` improved | 50'000 | - | 430.12 secs 477428 words |
+ 
+ The result of the last indexing:
+ 
+    (affairswa,List(FreqPosting(2063978077,2), FreqPosting(1402016186,2)))
  
  In general, here is a good cheat-sheet about the 
  [performance of collections](http://docs.scala-lang.org/overviews/collections/performance-characteristics.html).
  
+ 
+    27500 APdocuments, completed in 430.12 secs
+                   (affairswa,List(FreqPosting(2063978077,AP8912080202,2), FreqPosting(1402016186,AP8908210201,2))), Some(AP8912080202)
+                   size: 477428
+
+              
 ## Memory usage
 
 see http://alvinalexander.com/scala/how-to-use-stream-class-lazy-list-scala-cookbook:

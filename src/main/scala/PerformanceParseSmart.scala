@@ -12,9 +12,17 @@ import ch.ethz.dal.tinyir.processing.XMLDocument
 object PerformanceParseSmart {
   def main(args: Array[String]): Unit = {
 
-    val bare, smart = true
+    val bare, smart = false
     val inf = InputFiles(args)
     println(s"working on ${inf.DocPath}")
+
+    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = false, stopWords = false, stemming = false))
+    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = false, stemming = false))
+    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = false))
+    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = true))
+    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = true, chopping = 6))
+    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = false, chopping = 6))
+    // testAttributes(new TipsterStreamSmart(inf.DocPath, chopping = 6))
 
     if (bare) {
       var docs = new TipsterStream(inf.DocPath)
@@ -29,20 +37,6 @@ object PerformanceParseSmart {
       System.gc
     }
 
-    return
-
-    println(s"smart/slow Stream...free ${Timer.freeMB()} MB, max ${Timer.totalMB()} MB")
-    val t3 = Timer()
-    val inp = InputFiles(args)
-
-    val smartStream = new TipsterStreamSmart(inp.DocPath, frequencies = true)
-    val name2 = smartStream.stream.map(x => (x.title, x.ID))
-    val len = smartStream.length
-    println(s"smart stream, len $len in ${t3.elapsed()} sec, free ${Timer.totalMB()} MB")
-
-    val df2 = doc_freq(smartStream.stream, progress = true)
-    val sorted = df2.toSeq.sortWith(_._2 > _._2)
-    println(s"size: ${sorted.size}, top: ${sorted.slice(0, 20)}")
   }
 
   def TimeStream(docs: TipsterStream): Unit = {
@@ -55,8 +49,51 @@ object PerformanceParseSmart {
       (x.ID, x.name, x.tokens.length)
     }).sortBy(_._2)
     val len = names.length
-    println(s"${streamName}, size $len in ${t.elapsed()} sec, free ${Timer.freeMB()} MB")
+    println(s"$streamName, size $len in ${t.elapsed()} sec, free ${Timer.freeMB()} MB")
     println(s"sorted is ${names.slice(0, 20)}")
+  }
+
+  /**
+    * compare timing performances of various stream options
+    * @param docs Stream
+    */
+  def compareStreaming(docs: TipsterStreamSmart): Unit = {
+    println(s"numbers=${docs.numbers}, stopwords=${docs.stopWords}, stemming=${docs.stemming}, chopping=${docs.chopping}")
+    var totTokens = 0
+    var totTf = collection.mutable.Map[String, Int]()
+
+    val t = Timer(step = 100, heapInfo = true)
+    for (doc <- docs.stream.slice(0, 1001)) {
+      t.progress(s"${doc.name}, ${doc.title}")
+
+      //val tokens = TipsterParseSmart.testTokenize(doc.content, docs.numbers, docs.stopWords, docs.stemming, docs.chopping)
+      totTokens += doc.tokens.length
+      for (tf <- doc.termFrequencies) {
+        totTf += tf._1 -> (1 + totTf.getOrElse(tf._1, 1))
+      }
+    }
+    println(s"total tokens: $totTokens, term freq: ${totTf.size}, ${totTf.head} in ${t.elapsed()} secs")
+    println("*********")
+  }
+
+  def testAttributes(docs: TipsterStreamSmart): Unit = {
+
+    var skip = ""
+    val t = Timer(step = 500)
+    for (doc <- docs.stream) {
+      t.progress(s"${doc.name}")
+      val n = doc.name.substring(0, 2)
+      if (n != skip) {
+        val b = doc.body
+        val c = doc.codes
+        val t = doc.title
+        val d = doc.date
+        val tokens = doc.tokens
+        val tokset = tokens.toSet
+        println(s"${doc.name}, $t, $d, tokens.size=${tokens.size}, tokenset=${tokset.size}")
+        skip = n
+      }
+    }
   }
 
 

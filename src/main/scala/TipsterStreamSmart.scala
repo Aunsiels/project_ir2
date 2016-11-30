@@ -3,20 +3,22 @@ import ch.ethz.dal.tinyir.io.TipsterStream
 import java.io.{FileOutputStream, PrintWriter}
 import scala.collection.JavaConversions._
 
-class TipsterStreamSmart(path: String, 
-                         ext: String = "",
-                         stopWords: Boolean = true,
-                         stemming: Boolean = true,
-                         maxDocs: Integer = Int.MaxValue,
-                         frequencies: Boolean = false) extends TipsterStream(path, ext) {
+class TipsterStreamSmart(val path: String,
+                         val numbers: Boolean = true,
+                         val stopWords: Boolean = true,
+                         val stemming: Boolean = true,
+                         val chopping: Int = -1,
+                         val maxDocs: Integer = Int.MaxValue
+                         ) extends TipsterStream(path, "") {
 
   override def stream : Stream[TipsterParseSmart] =
-    unparsed.stream.slice(0, maxDocs).map(is => new TipsterParseSmart(is, stopWords, stemming))
+    unparsed.stream.slice(0, maxDocs).map(is => new TipsterParseSmart(is, reduceNumbers = numbers,
+      reduceStopWords = stopWords, stemming = stemming, chopping = chopping))
 
 
   /**
     * compute the term frequency of all documents in this stream
-    * @param progress
+    * @param progress text to println during progress
     * @return
     */
   def docFrequencies(progress: Boolean = false): Map[String, Int] = {
@@ -37,7 +39,7 @@ object TipsterStreamSmart {
   def main(args: Array[String]): Unit = {
     val path = InputFiles(args).DocPath
     println(s"Testing ${TipsterParseSmart.getClass.getName} with $path")
-    val stream = new TipsterStreamSmart(path, frequencies = true)
+    val stream = new TipsterStreamSmart(path)
     val t = Timer()
     val df = stream.docFrequencies(true)
     println(s"elapsed for frequencies ${t.elapsed()}, number of tokens ${df.size}")

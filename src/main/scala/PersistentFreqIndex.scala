@@ -11,7 +11,7 @@ import java.time.Duration
 import scala.collection.mutable.HashMap
 import scala.util.Try
 
-case class FreqPosting(id: Int, freq: Int) extends Ordered[FreqPosting] {
+case class FreqPosting(id: Int, name: String, freq: Int) extends Ordered[FreqPosting] {
   def compare(that: FreqPosting) = this.id compare that.id
 }
 
@@ -29,9 +29,9 @@ class PersistentFreqIndex(docs : Stream[XMLDocument], dbPath : String, forceInde
         var docsProcessed = 0
         var overallMap = Map[String, List[FreqPosting]]()
         while (docsProcessed < docs.size) {
-          var docsSub = docs.slice(docsProcessed, (docsProcessed + batchSize))
+          val docsSub = docs.slice(docsProcessed, docsProcessed + batchSize)
           val groupedTuples = postings(docsSub).groupBy(_.term)
-          val result = groupedTuples.mapValues(_.map(tfT => FreqPosting(tfT.doc, tfT.count)).sorted)
+          val result = groupedTuples.mapValues(_.map(tfT => FreqPosting(tfT.doc, "TODO-Michael", tfT.count)).sorted)
           if (!appendBatchesToDB) {
             overallMap = overallMap ++ result.map {
               case (term, listFP) => term -> (listFP ++ overallMap.getOrElse(term, List()))
@@ -81,7 +81,7 @@ class PersistentFreqIndex(docs : Stream[XMLDocument], dbPath : String, forceInde
       var dbFile = new File(dbPath)
       factory.destroy(dbFile, options)
       dbFile = new File(dbPath + "dbWithIndexOf" + docs.size + "Docs")
-      options.createIfMissing(true);
+      options.createIfMissing(true)
       val db = factory.open(dbFile, options)
       try {
         index.foreach {
@@ -112,6 +112,7 @@ class PersistentFreqIndex(docs : Stream[XMLDocument], dbPath : String, forceInde
               var postings = postingStringList.map(
                 psl => FreqPosting(
                   psl.substring(1, psl.length - 1).split(",")(0).toInt,
+                  "TODO-Michael",
                   psl.substring(1, psl.length - 1).split(",")(1).toInt)).toList
               //println("already in db: " + postings)
               postings = postings ++ index._2
@@ -132,9 +133,9 @@ class PersistentFreqIndex(docs : Stream[XMLDocument], dbPath : String, forceInde
     def recreateIndexFromDisk(): Map[String, PostList] = {
       println("recreating inverted index from db started")
       var index = Map[String, PostList]()
-      val options = new Options();
-      options.createIfMissing(true);
-      val db = factory.open(new File(dbPath), options);
+      val options = new Options()
+      options.createIfMissing(true)
+      val db = factory.open(new File(dbPath), options)
       val iterator = db.iterator()
       try {
         iterator.seekToFirst()
@@ -146,6 +147,7 @@ class PersistentFreqIndex(docs : Stream[XMLDocument], dbPath : String, forceInde
           val postings = postingStringList.map(
             psl => FreqPosting(
               psl.substring(1, psl.length - 1).split(",")(0).toInt,
+              "TODO-Michael",
               psl.substring(1, psl.length - 1).split(",")(1).toInt)).toList
           index += key -> postings
           //println(postings)
@@ -161,11 +163,11 @@ class PersistentFreqIndex(docs : Stream[XMLDocument], dbPath : String, forceInde
     }
 
     def getAmountOfDocsInIndex(): Int = {
-      this.index.map(index => index._2.map(fp => fp.id)).flatten.toSet.size
+      this.index.flatMap(index => index._2.map(fp => fp.id)).toSet.size
     }
 
     def getDocsInIndex(): Set[Int] = {
-      this.index.map(index => index._2.map(fp => fp.id)).flatten.toSet
+      this.index.flatMap(index => index._2.map(fp => fp.id)).toSet
     }
   }
 
@@ -179,12 +181,14 @@ object PersistentFreqIndex {
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
 
-    createIndex(new TipsterStreamSmart(docPath))
+    createIndex(docPath)
+
     return
 
     val batchSize = 1
     val recomputeIndex = true
-    val tipsterStream = new TipsterStreamSmart(docPath, "", true, true, nDocs).stream
+    val tipsterStream = new TipsterStreamSmart(docPath,
+      numbers = true, stopWords = true, stemming = true, maxDocs = nDocs).stream
     val appendBatchesToDB = true
     var idx = new PersistentFreqIndex(tipsterStream, dbPath, recomputeIndex, batchSize, appendBatchesToDB)
     //var idx = new PersistentFreqIndex(docPath, nDocs, dbPath, recomputeIndex)    
@@ -197,9 +201,10 @@ object PersistentFreqIndex {
     * test if it is possible to get the whole index into memory.
     * Create an index of Terms and tuples with the document id and the frequency inside that document
     *
-    * @param docs
+    * @param path path to directory with zip file
     */
-  def createIndex(docs: TipsterStreamSmart): Map[String, List[FreqPosting]] = {
+  def createIndex(path: String): Map[String, List[FreqPosting]] = {
+    val docs = new TipsterStreamSmart(path, stopWords = true, stemming = true, numbers = true, chopping = 6)
     val index = collection.mutable.Map[String, List[FreqPosting]]()
     val t = Timer(500, heapInfo = true)
     for (doc <- docs.stream) {
@@ -208,12 +213,13 @@ object PersistentFreqIndex {
       for (tf <- doc.termFrequencies) {
         val term = tf._1
         val freq = tf._2
-        val fposts = FreqPosting(id, freq) :: index.getOrElse(term, List[FreqPosting]())
+        val fposts = FreqPosting(id, doc.name, freq) :: index.getOrElse(term, List[FreqPosting]())
         index += term -> fposts
       }
     }
     println(s"completed in ${t.elapsed()} secs")
-    println(s"${index.head}")
+    println(s"head: ${index.head}")
+    println(s"size: ${index.size}")
     index.toMap
   }
 

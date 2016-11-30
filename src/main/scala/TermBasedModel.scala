@@ -20,11 +20,11 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
   idx.getDocsInIndex().foreach{
      docId => 
      docVectorNorms += docId -> 0            
-  };
+  }
   idx.index.foreach{
      index => 
      val df = index._2.size
-     val idf = math.log((nDocs / df))
+     val idf = math.log(nDocs / df)
      index._2.foreach{
        freqPosting => 
        var tf = freqPosting.freq
@@ -51,7 +51,7 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
       val idxList = idx.index.getOrElse(queryTerm._1, List()) 
       if(idxList.size > 0) {        
         val df = idxList.size
-        val idf = math.log((nDocs / df))
+        val idf = math.log(nDocs / df)
         idxList.foreach{
           idx => 
           var tfdoc = idx.freq
@@ -66,7 +66,7 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
     //println(cosineDistanceMap)
     cosineDistanceMap = cosineDistanceMap.map(idDist => (idDist._1, (idDist._2 / (queryVectorNorm * docVectorNorms(idDist._1))))) 
     //println(cosineDistanceMap)
-    var result = cosineDistanceMap.toSeq.sortWith(_._2 > _._2).take(100).toSeq
+    val result = cosineDistanceMap.toSeq.sortWith(_._2 > _._2).take(100)
     println(result)
     result
   }
@@ -82,9 +82,9 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
     listOfQueryTerms.foreach{
       queryTerm => 
       val idxList = idx.index.getOrElse(queryTerm, List()) 
-      if(idxList.size > 0) {
+      if(idxList.nonEmpty) {
         val df = idxList.size
-        val idf = math.log((nDocs / df))
+        val idf = math.log(nDocs / df)
         idxList.foreach{
           idx => 
           var tf = idx.freq
@@ -93,7 +93,7 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
         }
       }      
     }
-    var result = scoreMap.toSeq.sortWith(_._2 > _._2).take(100).toSeq
+    var result = scoreMap.toSeq.sortWith(_._2 > _._2).take(100)
     println(result)
     result
   }
@@ -107,7 +107,7 @@ object TermBasedModel {
     val docPath = "C:/Users/Michael/Desktop/IR Data/Project 2/documents/"
     val dbPath = "C:/Users/Michael/Desktop/indexDatabases/dbWithIndexOf2Docs"
     //val tipsterStream = new TipsterStream(docPath).stream.dropRight(100000 - nDocs)   
-    val tipsterStream = new TipsterStreamSmart(docPath, "", true, true, nDocs)
+    val tipsterStream = new TipsterStreamSmart(docPath, true, true, maxDocs = nDocs)
     val recomputeIndex = false
     var batchSize = 1000
     var appendBatchesToDB = false
