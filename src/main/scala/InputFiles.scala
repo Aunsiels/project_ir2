@@ -41,14 +41,14 @@ object InputFiles {
         "queries" -> "C:/Users/Michael/Desktop/IR Data/Project 2/questions-descriptions.txt",
         "relevance" -> "C:/Users/Michael/Desktop/IR Data/Project 2/relevance-judgements.csv"),
     "mmgreiner" ->
-      Map("database" -> ".",
+      Map("database" -> "./database/",
         "documents" -> "./data/documents/",
         "queries" -> "./data/questions-descriptions.txt",
         "relevance" -> "./data/relevance-judgements.csv"),
     "julien" ->
       Map("database" -> "", "documents" -> "./data/documents/"),
     "default" ->
-      Map("documents" -> "./data/documents/", "database" -> ".database")
+      Map("documents" -> "./data/documents/", "database" -> "./database/")
   )
 
 }

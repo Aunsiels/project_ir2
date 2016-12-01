@@ -10,7 +10,7 @@ import scala.collection.mutable.Map
 
 case class QueryParse(fname: String, options: TipsterOptions = TipsterOptions()) {
 
-  var queries = collection.mutable.Map[String, List[String]]()
+  var queries = Map[String, List[String]]()
 
   /* Parse entries that look like this. Note that title can extend lines until the next <desc>
   <num> Number: 090
@@ -21,13 +21,13 @@ case class QueryParse(fname: String, options: TipsterOptions = TipsterOptions())
   Producers
   */
 
-  val patNumber = "<num>\\s+Number:\\s+(\\d+)\\s*".r
-  val patTitle = "<title>\\s+Topic:\\s+(.+)\\s*".r
-  val patCont = "\\s*(\\S.*)\\s*".r
-  val patDesc = "<desc>(.+)".r
+  private val patNumber = "<num>\\s+Number:\\s+(\\d+)\\s*".r
+  private val patTitle = "<title>\\s+Topic:\\s+(.+)\\s*".r
+  private val patCont = "\\s*(\\S.*)\\s*".r
+  private val patDesc = "<desc>(.+)".r
 
-  var tempNum = ""
-  var tempTit = ""
+  private var tempNum = ""
+  private var tempTit = ""
 
   Source.fromFile(fname).getLines()
     .foreach {

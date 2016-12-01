@@ -31,6 +31,13 @@ arguments. `xargs` can be used to solve this problems.
     $ ls | grep PT | xargs zip -X pt.zip
     $ ls | grep PT | xargs rm
     
+Extracting a single file from zip:
+
+    $ unzip -l documents.zip | grep DOE | more
+    $ unzip -l documents.zip DOE1-01-0128 > DOE1-01-0128.xml
+    
+
+
 ## Topics
 
 The Wall Street Journal articles have topics in the `<NS>` tag. Maybe we can use this.
@@ -92,6 +99,180 @@ All times measured on Markus's MacBook Air with 4GB max heap.
                    size: 477428
 
               
+## Test 100'000
+numbers=false, stopwords=false, stemming=false, chopping=-1
+total tokens: 65793466, term freq: 2133425, (pastviolations,2) in 253.59 secs
+
+
+## Testing query
+
+Testing was done with stemming, but no chopping.
+
+These terms cannot be found: `fine-diamet`, `alternative/renew`, `merit-pai`. They all contain dash or slashes.
+
+    query 089 List(downstream, invest, opec, member, state) ****
+        67
+        1935
+        537
+        6393
+        14013
+    query 080 List(presidenti, candid, platform) ****
+        2112
+        1786
+        617
+    query 074 List(conflict, polici) ****
+        1103
+        4201
+    query 077 List(poach) ****
+        112
+    query 062 List(militari, coup, etat) ****
+        5066
+        937
+        39
+    query 056 List(prime, lend, rate, move, predict) ****
+        2094
+        554
+        3814
+        5065
+        2101
+    query 083 List(measur, protect, atmospher) ****
+        4157
+        3283
+        917
+    query 071 List(border, incurs) ****
+        2021
+        177
+    query 065 List(inform, retriev, system) ****
+        4123
+        198
+        6782
+    query 086 List(bank, failur) ****
+        3451
+        1293
+    query 059 List(weather, relat, fatal) ****
+        1309
+        3244
+        494
+    query 053 List(leverag, buyout) ****
+        455
+        578
+    query 068 List(health, hazard, fine-diamet, fiber) ****
+        2247
+        584
+        0
+        427
+    query 079 List(frg, polit, parti, posit) ****
+        23
+        4966
+        4782
+        3451
+    query 085 List(offici, corrupt) ****
+        11366
+        1039
+    query 070 List(surrog, motherhood) ****
+        144
+        36
+    query 073 List(demograph, shift, nation, boundari) ****
+        112
+        1045
+        13020
+        277
+    query 067 List(polit, motiv, civil, disturb) ****
+        4966
+        484
+        2264
+        677
+    query 088 List(crude, oil, price, trend) ****
+        908
+        2906
+        3955
+        922
+    query 076 List(constitut, origin, intent) ****
+        1644
+        1498
+        949
+    query 082 List(genet, engin) ****
+        382
+        1822
+    query 061 List(isra, role, iran-contra, affair) ****
+        1217
+        2379
+        573
+        1990
+    query 055 List(insid, trade) ****
+        1604
+        3901
+    query 064 List(hostage-tak) ****
+        127
+    query 058 List(rail, strike) ****
+        390
+        2137
+    query 052 List(south, african, sanction) ****
+        4289
+        905
+        775
+    query 081 List(financi, crunch, televangelist, wake, ptl, scandal) ****
+        2333
+        58
+        29
+        376
+        352
+        887
+    query 090 List(data, proven, reserv, oil, natur, ga, produc) ****
+        2750
+        287
+        1804
+        2906
+        2494
+        2590
+        3809
+    query 063 List(machin, translat) ****
+        1029
+        326
+    query 078 List(greenpeac) ****
+        206
+    query 084 List(alternative/renew, energi, plant, equip, instal) ****
+        0
+        3783
+        2921
+        1970
+        1202
+    query 051 List(airbu, subsidi) ****
+        139
+        357
+    query 087 List(crimin, action, offic, fail, financi, institut) ****
+        1515
+        3897
+        7148
+        2853
+        2333
+        2444
+    query 066 List(natur, languag, process) ****
+        2494
+        761
+        3830
+    query 072 List(demograph, shift) ****
+        112
+        1045
+    query 060 List(merit-pai, senior) ****
+        0
+        1874
+    query 069 List(attempt, reviv, salt, treati) ****
+        3137
+        340
+        526
+        1183
+    query 075 List(autom) ****
+        346
+    query 054 List(satellit, launch, contract) ****
+        651
+        1688
+        2114
+    query 057 List(mci) ****
+        92
+    survived
+
+
 ## Memory usage
 
 see http://alvinalexander.com/scala/how-to-use-stream-class-lazy-list-scala-cookbook:
