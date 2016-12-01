@@ -34,7 +34,7 @@ object InputFiles {
   val defaultFiles = Map(
     "Michael" ->
       Map("database" -> "",
-        "documents" -> "C:/Users/Michael/Desktop/IR Data/Project 2/"),
+        "documents" -> "C:/Users/Michael/Desktop/IR Data/Project 2/documents/"),
     "mmgreiner" ->
       Map("database" -> ".",
         "documents" -> "./data/documents/",
