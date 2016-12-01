@@ -1,4 +1,6 @@
 import ch.ethz.dal.tinyir.io._
+
+import scala.collection.mutable
 import scala.collection.mutable.Map
 
 case class TfIdfVector(docId: String, rel: String) 
@@ -19,8 +21,8 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
      val idf = math.log(nDocs / df)
      index._2.foreach{
        freqPosting => 
-       var tf = freqPosting.freq
-       var tfidf = math.log(1 + tf) * idf
+       val tf = freqPosting.freq
+       val tfidf = math.log(1 + tf) * idf
        docVectorNorms(freqPosting.name) += (tfidf * tfidf)
      }
   }
@@ -78,13 +80,13 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
         val idf = math.log(nDocs / df)
         idxList.foreach{
           idx => 
-          var tf = idx.freq
-          var tfidf = math.log(1 + tf) * idf
+          val tf = idx.freq
+          val tfidf = math.log(1 + tf) * idf
           scoreMap += idx.name -> (scoreMap.getOrElse(idx.name, 0.0) + tfidf) 
         }
       }      
     }
-    var result = scoreMap.toSeq.sortWith(_._2 > _._2).take(100)
+    val result = scoreMap.toSeq.sortWith(_._2 > _._2).take(100)
     println(result)
     result
   }
@@ -98,7 +100,7 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
 object TermBasedModel {
   def main(args: Array[String]): Unit = {
      
-    val nDocs = 10000
+    val options = TipsterOptions(maxDocs = 10000, chopping = -1)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
@@ -106,29 +108,28 @@ object TermBasedModel {
     val relevancePath = infiles.Relevance
     val forceIndexRecreation = false
 
-    val persistentIndex = new PersistentFreqIndex(docPath, dbPath, nDocs, forceIndexRecreation)
+    val persistentIndex = new PersistentFreqIndex(docPath, dbPath, forceIndexRecreation, options)
    
-    val queryParse = new QueryParse(queryPath)   
-    var relelvanceParse = new RelevanceJudgementParse(relevancePath)  
+    val queryParse = QueryParse(queryPath, options)
+    val relelvanceParse = new RelevanceJudgementParse(relevancePath)
  
     val termModel = new TermBasedModel(persistentIndex)
-    var sampleQuery = List("aircra",  "dead",  "whereabout",  "adasdsdfasd")
+    val sampleQuery = List("aircra",  "dead",  "whereabout",  "adasdsdfasd")
     
     termModel.computeTfIdfScoresForQuery(sampleQuery)
     
-    var tfIdfScores = termModel.getTfIdfScores(queryParse.queries)
+    val tfIdfScores = termModel.getTfIdfScores(queryParse.queries)
     
     termModel.computeCosineDistancesForQuery(sampleQuery)
     
-    var cosineDistances = termModel.getCosineDistances(queryParse.queries)
+    val cosineDistances = termModel.getCosineDistances(queryParse.queries)
     
     termModel.convertScoresToSetOfDocNames(cosineDistances).foreach{
       cosineDistance =>
         println(cosineDistance)
-        var stat = Evaluation.getStat(cosineDistance._2, relelvanceParse.getRelevantDocsForQuery(cosineDistance._1.toInt), 1)
+        val stat = Evaluation.getStat(cosineDistance._2, relelvanceParse.getRelevantDocsForQuery(cosineDistance._1.toInt), 1)
         println(stat)
     }
     
-    return       
   }
 }

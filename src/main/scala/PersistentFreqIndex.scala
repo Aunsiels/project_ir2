@@ -2,10 +2,12 @@ import ch.ethz.dal.tinyir.indexing._
 import ch.ethz.dal.tinyir.processing._
 import ch.ethz.dal.tinyir.io._
 import java.io.File
+
 import org.iq80.leveldb._
 import org.fusesource.leveldbjni.JniDBFactory._
-import scala.util.Try
 
+import scala.collection.mutable
+import scala.util.Try
 import scala.collection.mutable.Map
 
 
@@ -13,12 +15,14 @@ case class FreqPosting(id: Int, name: String, freq: Int) extends Ordered[FreqPos
   def compare(that: FreqPosting) = this.id compare that.id
 }
 
-class PersistentFreqIndex(path : String, dbPath : String, maxDocs: Int, forceIndexRecreation : Boolean) extends InvertedIndex[FreqResult] {
+class PersistentFreqIndex(path : String, dbPath : String,
+                          forceIndexRecreation : Boolean,
+                          options: TipsterOptions = TipsterOptions()) extends InvertedIndex[FreqResult] {
 
-    val index: Map[String, List[FreqPosting]] = {
+    val index: mutable.Map[String, List[FreqPosting]] = {
       //if db does not exist or if we force a recreation
       if (forceIndexRecreation) {
-        createIndex(path, maxDocs)
+        createIndex(path, options)
       }
       //otherwise: load db content into memory
       else {
@@ -32,9 +36,9 @@ class PersistentFreqIndex(path : String, dbPath : String, maxDocs: Int, forceInd
         
     println("index contains term frequencies from totally " + getAmountOfDocsInIndex() + " documents")
     
-    def createIndex(path: String, maxDocs: Int): Map[String, List[FreqPosting]] = {
-      val docs = new TipsterStreamSmart(path, stopWords = true, stemming = true, numbers = true, chopping = 6, maxDocs = maxDocs)
-      val index = Map[String, List[FreqPosting]]()
+    def createIndex(path: String, options: TipsterOptions = TipsterOptions()): mutable.Map[String, List[FreqPosting]] = {
+      val docs = new TipsterStreamSmart(path, options)
+      val index = mutable.Map[String, List[FreqPosting]]()
       val t = Timer(500, heapInfo = true)
       for (doc <- docs.stream) {
         val id = doc.ID
@@ -52,7 +56,7 @@ class PersistentFreqIndex(path : String, dbPath : String, maxDocs: Int, forceInd
       index
     }
   
-    def makeIndexStructurePersistent(dbPath: String, index: Map[String, List[FreqPosting]]) = {
+    def makeIndexStructurePersistent(dbPath: String, index: mutable.Map[String, List[FreqPosting]]) = {
       println("storing inverted index in db started")
       val options = new Options()
       var dbFile = new File(dbPath)
@@ -72,9 +76,9 @@ class PersistentFreqIndex(path : String, dbPath : String, maxDocs: Int, forceInd
     }
 
     
-    def recreateIndexFromDisk(): Map[String, List[FreqPosting]] = {
+    def recreateIndexFromDisk(): mutable.Map[String, List[FreqPosting]] = {
       println("recreating inverted index from db started")
-      var index = Map[String, List[FreqPosting]]()
+      var index = mutable.Map[String, List[FreqPosting]]()
       val options = new Options()
       options.createIfMissing(true)
       val db = factory.open(new File(dbPath), options)
@@ -122,15 +126,14 @@ class PersistentFreqIndex(path : String, dbPath : String, maxDocs: Int, forceInd
 object PersistentFreqIndex {
   def main(args: Array[String]): Unit = {
 
-    val nDocs = 100000
+    val options = TipsterOptions(maxDocs = 100000)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
     val forceIndexRecreation = true
 
-    val persistentIndex = new PersistentFreqIndex(docPath, dbPath, nDocs, forceIndexRecreation)
-     
-    return
-  }  
+    val persistentIndex = new PersistentFreqIndex(docPath, dbPath, forceIndexRecreation, options)
+  }
+
 
 }

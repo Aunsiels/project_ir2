@@ -1,8 +1,15 @@
-import ch.ethz.dal.tinyir.processing.{TipsterParse, Tokenizer, StopWords}
+/**
+@author mmgreiner
+@version
+ */
+
+import ch.ethz.dal.tinyir.processing.{TipsterParse, StopWords}
 import java.io.InputStream
 
 import ch.ethz.dal.tinyir.io.DocStream
 import com.github.aztek.porterstemmer.PorterStemmer
+
+
 
 class TipsterParseSmart(is: InputStream,
                         reduceNumbers: Boolean = true,
@@ -10,10 +17,13 @@ class TipsterParseSmart(is: InputStream,
                         stemming: Boolean = true,
                         chopping: Integer = -1) extends TipsterParse(is) {
 
+  def this(is: InputStream, options: TipsterOptions) =
+    this(is, options.numbers, options.stopWords, options.stemming, options.chopping)
+
+
   override def ID = this.name.hashCode()
 
-  override def tokens = TipsterParseSmart.tokenize(text = content, numbers = reduceNumbers,
-    stops = reduceStopWords, stemming = stemming, chopping = chopping)
+  override def tokens = TipsterParseSmart.tokenize(content, reduceNumbers, reduceStopWords, stemming, chopping)
 
   /**
     * Compute the term frequencies.
@@ -247,39 +257,6 @@ object TipsterParseSmart {
     replace(t, rOrdinal)
   }
 
-  /**
-    * Tokenizes the given text. Replaces numbers and dates by special tokens <NUMBER>, <TNUMBER> (= two numbers 9/11),
-    * <ORDINAL> (like 1st, 2nd, ..), <DATE>
-    * @param text the text to be tokenized
-    * @param reduceStopWords should stopswords be replaced by <STOP>? default yes
-    * @param stemming should PorterStemmer be applied? default yes
-    * @return
-    */
-  def tokenize2(text: String,
-                       reduceStopWords: Boolean = true,
-                       stemming: Boolean = true): List[String] = {
-    text.split("[ .,;:?!*&$-+\\s]+")
-      .filter(_.length >= 3)
-      .map(x => {
-        // there are many misspellings around and, like andi for "and i" or "anda" for "and a".
-        // however, there may be names like this also.
-
-        var t = trim(x.toLowerCase)
-        if (t.length > 0) {
-          t = replace(t, rUSPhone)
-          t = replace(t, rDate)
-          t = replace(t, rNumber)
-          t = replace(t, rTwoNum)
-          t = replace(t, rOrdinal)
-
-          if (reduceStopWords)
-            t = replace(t, rStop)
-          if (stemming && (t(0) != "<"))
-            t = PorterStemmer.stem(t)
-        }
-        t
-    }).filter(_.length > 0).toList
-  }
 
   private def tokenizer (text: String, numbers: Boolean, stops: Boolean, stemming: Boolean, chopping: Int): Array[String] =
     text.split("[ .,;:?!*&$-+\\s]+")
@@ -320,6 +297,8 @@ object TipsterParseSmart {
                 numbers: Boolean = true, stops: Boolean = true, stemming: Boolean = true, chopping: Int = -1): List[String] =
     tokenizer(text, numbers, stops, stemming, chopping).toList
 
+  def tokenize(text: String, options: TipsterOptions): List[String] =
+    tokenizer(text, options.numbers, options.stopWords, options.stemming, options.chopping).toList
 
   def main(args: Array[String]) {
 

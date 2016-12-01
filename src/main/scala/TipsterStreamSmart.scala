@@ -1,8 +1,20 @@
+/**
+  * @author mmgreiner
+  */
 
 import ch.ethz.dal.tinyir.io.TipsterStream
 import java.io.{FileOutputStream, PrintWriter}
 import scala.collection.JavaConversions._
 
+/**
+  * Class to create a stream to all XML documents. The tokenizer has various options
+  * @param path folder with zip file containing XML documents
+  * @param numbers if true, tokenizer reduces numbers
+  * @param stopWords if true, stop words are eliminated
+  * @param stemming if true, Porter Stemmer is applied
+  * @param chopping if > 0, all tokens are chopped to this length
+  * @param maxDocs max number of documents handled in stream
+  */
 class TipsterStreamSmart(val path: String,
                          val numbers: Boolean = true,
                          val stopWords: Boolean = true,
@@ -10,6 +22,10 @@ class TipsterStreamSmart(val path: String,
                          val chopping: Int = -1,
                          val maxDocs: Integer = Int.MaxValue
                          ) extends TipsterStream(path, "") {
+
+  def this(path: String, options: TipsterOptions) =
+    this(path, options.numbers, options.stopWords, options.stemming, options.chopping, options.maxDocs)
+
 
   override def stream : Stream[TipsterParseSmart] =
     unparsed.stream.slice(0, maxDocs).map(is => new TipsterParseSmart(is, reduceNumbers = numbers,
@@ -21,7 +37,7 @@ class TipsterStreamSmart(val path: String,
     * @param progress text to println during progress
     * @return
     */
-  def docFrequencies(progress: Boolean = false): Map[String, Int] = {
+  private def docFrequencies(progress: Boolean = false): Map[String, Int] = {
     val df = collection.mutable.Map[String, Int]()
     val t = Timer(step = 500, heapInfo = true)
     for (doc <- stream) {

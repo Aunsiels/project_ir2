@@ -13,15 +13,20 @@ object PerformanceParseSmart {
   def main(args: Array[String]): Unit = {
 
     val bare, smart = false
+    val compare = true
     val inf = InputFiles(args)
     println(s"working on ${inf.DocPath}")
 
-    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = false, stopWords = false, stemming = false))
-    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = false, stemming = false))
-    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = false))
-    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = true))
-    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = true, chopping = 6))
-    compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = false, chopping = 6))
+    if (compare) {
+      compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = false, stopWords = false, stemming = false))
+      compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = false, stemming = false))
+      compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = false))
+      System.gc
+      compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = true))
+      compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = true, chopping = 6))
+      compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = true, stopWords = true, stemming = false, chopping = 6))
+    }
+
     // testAttributes(new TipsterStreamSmart(inf.DocPath, chopping = 6))
 
     if (bare) {
@@ -57,13 +62,13 @@ object PerformanceParseSmart {
     * compare timing performances of various stream options
     * @param docs Stream
     */
-  def compareStreaming(docs: TipsterStreamSmart): Unit = {
+  def compareStreaming(docs: TipsterStreamSmart, maxDocs: Int = Int.MaxValue): Unit = {
     println(s"numbers=${docs.numbers}, stopwords=${docs.stopWords}, stemming=${docs.stemming}, chopping=${docs.chopping}")
     var totTokens = 0
     var totTf = collection.mutable.Map[String, Int]()
 
-    val t = Timer(step = 100, heapInfo = true)
-    for (doc <- docs.stream.slice(0, 1001)) {
+    val t = Timer(step = 1000, heapInfo = true)
+    for (doc <- docs.stream.slice(0, maxDocs)) {
       t.progress(s"${doc.name}, ${doc.title}")
 
       //val tokens = TipsterParseSmart.testTokenize(doc.content, docs.numbers, docs.stopWords, docs.stemming, docs.chopping)

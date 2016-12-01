@@ -43,8 +43,8 @@ object InputFiles {
     "mmgreiner" ->
       Map("database" -> ".",
         "documents" -> "./data/documents/",
-        "queries" -> "./data/ptdocuments/",
-        "relevance" -> "./data/APdocuments/"),
+        "queries" -> "./data/questions-descriptions.txt",
+        "relevance" -> "./data/relevance-judgements.csv"),
     "julien" ->
       Map("database" -> "", "documents" -> "./data/documents/"),
     "default" ->

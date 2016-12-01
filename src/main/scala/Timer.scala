@@ -16,7 +16,7 @@ case class Timer (step: Integer = 1000, heapInfo: Boolean = false, log: Logger =
   def elapsed() = f"${(System.nanoTime.toDouble - start) / 1000000000.0}%6.2f"
 
   def info (msg: String) {
-    var message = f"$count%5.0f ${elapsed()}"
+    var message = f"$count%5d ${elapsed()}"
     if (heapInfo)
       message += f" ${Timer.freeMB()}%6.2f MB"
     message = s"$message: $msg"
