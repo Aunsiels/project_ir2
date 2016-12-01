@@ -1,4 +1,6 @@
-import ch.ethz.dal.tinyir.io._
+/**
+  * @author Michael
+  */
 
 import scala.collection.mutable
 import scala.collection.mutable.Map
@@ -34,7 +36,7 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
   }
   
   def computeCosineDistancesForQuery(query : List[String]) : Seq[(String, Double)] = {
-    var queryTermFrequency = query.groupBy(identity).mapValues(t => t.length)
+    val queryTermFrequency = query.groupBy(identity).mapValues(t => t.length)
     println("computing score for query terms: " + queryTermFrequency)
     var cosineDistanceMap = Map[String, Double]()
     
@@ -43,14 +45,14 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
       queryTerm => 
       queryVectorNorm += (queryTerm._2 * queryTerm._2)
       val idxList = idx.index.getOrElse(queryTerm._1, List()) 
-      if(idxList.size > 0) {        
+      if(idxList.nonEmpty) {
         val df = idxList.size
         val idf = math.log(nDocs / df)
         idxList.foreach{
           idx => 
-          var tfdoc = idx.freq
-          var tfidfdoc = math.log(1 + tfdoc) * idf
-          var tfidfquery = math.log(1 + queryTerm._2) * idf          
+          val tfdoc = idx.freq
+          val tfidfdoc = math.log(1 + tfdoc) * idf
+          val tfidfquery = math.log(1 + queryTerm._2) * idf
           cosineDistanceMap += idx.name -> (cosineDistanceMap.getOrElse(idx.name, 0.0) + (tfidfdoc * tfidfquery)) 
         }
       }      
@@ -58,7 +60,7 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
     queryVectorNorm = math.sqrt(queryVectorNorm)
     //println(queryVectorNorm)
     //println(cosineDistanceMap)
-    cosineDistanceMap = cosineDistanceMap.map(idDist => (idDist._1, (idDist._2 / (queryVectorNorm * docVectorNorms(idDist._1))))) 
+    cosineDistanceMap = cosineDistanceMap.map(idDist => (idDist._1, idDist._2 / (queryVectorNorm * docVectorNorms(idDist._1))))
     //println(cosineDistanceMap)
     val result = cosineDistanceMap.toSeq.sortWith(_._2 > _._2).take(100)
     println(result)
@@ -114,7 +116,7 @@ object TermBasedModel {
     val relelvanceParse = new RelevanceJudgementParse(relevancePath)
  
     val termModel = new TermBasedModel(persistentIndex)
-    val sampleQuery = List("aircra",  "dead",  "whereabout",  "adasdsdfasd")
+    val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
     
     termModel.computeTfIdfScoresForQuery(sampleQuery)
     
