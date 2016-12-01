@@ -27,12 +27,12 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
   
   docVectorNorms = docVectorNorms.map(norms => (norms._1, math.sqrt(norms._2)))
   
-  def getCosineDistances(queries : Map[String, String]) : Map[String, Seq[(String, Double)]] = {
+  def getCosineDistances(queries : Map[String, List[String]]) : Map[String, Seq[(String, Double)]] = {
     queries.map(query => (query._1, computeCosineDistancesForQuery(query._2)))
   }
   
-  def computeCosineDistancesForQuery(query : String) : Seq[(String, Double)] = {
-    var queryTermFrequency = query.split(" ").groupBy(identity).mapValues(t => t.length)
+  def computeCosineDistancesForQuery(query : List[String]) : Seq[(String, Double)] = {
+    var queryTermFrequency = query.groupBy(identity).mapValues(t => t.length)
     println("computing score for query terms: " + queryTermFrequency)
     var cosineDistanceMap = Map[String, Double]()
     
@@ -63,15 +63,14 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
     result
   }
   
-  def getTfIdfScores(queries : Map[String, String]) : Map[String, Seq[(String, Double)]] =  {
+  def getTfIdfScores(queries : Map[String, List[String]]) : Map[String, Seq[(String, Double)]] =  {
     queries.map(query => (query._1, computeTfIdfScoresForQuery(query._2)))
   }
   
-  def computeTfIdfScoresForQuery(query : String) : Seq[(String, Double)] = {
-    var listOfQueryTerms = query.split(" ").toList
-    println("computing score for query terms: " + listOfQueryTerms)
+  def computeTfIdfScoresForQuery(query : List[String]) : Seq[(String, Double)] = {
+    println("computing score for query terms: " + query)
     var scoreMap = Map[String, Double]()
-    listOfQueryTerms.foreach{
+    query.foreach{
       queryTerm => 
       val idxList = idx.index.getOrElse(queryTerm, List()) 
       if(idxList.nonEmpty) {
@@ -113,7 +112,7 @@ object TermBasedModel {
     var relelvanceParse = new RelevanceJudgementParse(relevancePath)  
  
     val termModel = new TermBasedModel(persistentIndex)
-    var sampleQuery = "aircra dead whereabout adasdsdfasd quakepredict"
+    var sampleQuery = List("aircra",  "dead",  "whereabout",  "adasdsdfasd")
     
     termModel.computeTfIdfScoresForQuery(sampleQuery)
     

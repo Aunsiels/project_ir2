@@ -3,9 +3,9 @@ import scala.collection.mutable.Map
 
 class QueryParse(fname: String) {
   
-  private var topics = Map[String, String]()
+  private var topics = Map[String, List[String]]()
   
-  def queries : Map[String, String] = this.topics 
+  def queries : Map[String, List[String]] = this.topics 
      
   private var number : String = ""
   private var topic : String = ""    
@@ -18,7 +18,8 @@ class QueryParse(fname: String) {
         while(topic.startsWith(" ")) {
           topic = topic.substring(1)
         }
-        topics += number -> topic
+        var query = TipsterParseSmart.tokenize(topic, true, true, true, 6)
+        topics += number -> query
       }
     }
   //println(topics)

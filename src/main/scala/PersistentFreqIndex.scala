@@ -122,7 +122,7 @@ class PersistentFreqIndex(path : String, dbPath : String, maxDocs: Int, forceInd
 object PersistentFreqIndex {
   def main(args: Array[String]): Unit = {
 
-    val nDocs = 10000
+    val nDocs = 100000
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
