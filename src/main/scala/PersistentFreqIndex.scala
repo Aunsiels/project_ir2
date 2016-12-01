@@ -57,7 +57,7 @@ class PersistentFreqIndex(path : String, dbPath : String, maxDocs: Int, forceInd
       val options = new Options()
       var dbFile = new File(dbPath)
       factory.destroy(dbFile, options)
-      dbFile = new File(dbPath + "db")
+      dbFile = new File(dbPath)
       options.createIfMissing(true)
       val db = factory.open(dbFile, options)
       try {
@@ -77,7 +77,7 @@ class PersistentFreqIndex(path : String, dbPath : String, maxDocs: Int, forceInd
       var index = Map[String, List[FreqPosting]]()
       val options = new Options()
       options.createIfMissing(true)
-      val db = factory.open(new File(dbPath + "db"), options)
+      val db = factory.open(new File(dbPath), options)
       val iterator = db.iterator()
       try {
         iterator.seekToFirst()
@@ -109,8 +109,12 @@ class PersistentFreqIndex(path : String, dbPath : String, maxDocs: Int, forceInd
       this.index.flatMap(index => index._2.map(fp => fp.id)).toSet.size
     }
 
-    def getDocsInIndex(): Set[Int] = {
+    def getDocIdsInIndex(): Set[Int] = {
       this.index.flatMap(index => index._2.map(fp => fp.id)).toSet
+    }
+    
+    def getDocNamesInIndex(): Set[String] = {
+      this.index.flatMap(index => index._2.map(fp => fp.name)).toSet
     }
   }
 

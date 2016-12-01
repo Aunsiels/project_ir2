@@ -27,6 +27,8 @@ case class InputFiles(args: Array[String] = Array(), documents: String = "", dat
 
   val DocPath = if (args.length >= 1) args(0) else Docs("documents")
   val Database = if (args.length >= 2) args(1) else Docs("database")
+  val Queries = if (args.length >= 3) args(1) else Docs("queries")
+  val Relevance = if (args.length >= 4) args(1) else Docs("relevance")
 
 }
 
@@ -35,13 +37,14 @@ object InputFiles {
     "Michael" ->
       Map("database" -> "",
         "documents" -> "C:/Users/Michael/Desktop/IR Data/Project 2/documents/",
-        "database" -> "C:/Users/Michael/Desktop/FreqIndexDatabase/"
-      ),
+        "database" -> "C:/Users/Michael/Desktop/FreqIndexDatabase/",
+        "queries" -> "C:/Users/Michael/Desktop/IR Data/Project 2/questions-descriptions.txt",
+        "relevance" -> "C:/Users/Michael/Desktop/IR Data/Project 2/relevance-judgements.csv"),
     "mmgreiner" ->
       Map("database" -> ".",
         "documents" -> "./data/documents/",
-        "docs_pt" -> "./data/ptdocuments/",
-        "docs_ap" -> "./data/APdocuments/"),
+        "queries" -> "./data/ptdocuments/",
+        "relevance" -> "./data/APdocuments/"),
     "julien" ->
       Map("database" -> "", "documents" -> "./data/documents/"),
     "default" ->
