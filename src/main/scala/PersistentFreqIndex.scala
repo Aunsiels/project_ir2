@@ -11,6 +11,7 @@ import org.iq80.leveldb._
 import org.fusesource.leveldbjni.JniDBFactory._
 
 import scala.collection.mutable
+import scala.util.Success
 
 
 case class FreqPosting(id: Int, name: String, freq: Int) extends Ordered[FreqPosting] {
@@ -41,10 +42,11 @@ class PersistentFreqIndex(path: String, dbPath: String,
   def createIndex(path: String, options: TipsterOptions = TipsterOptions()): mutable.Map[String, List[FreqPosting]] = {
     val docs = new TipsterStreamSmart(path, options)
     val index = mutable.Map[String, List[FreqPosting]]()
-    val t = Timer(100, heapInfo = true)
+    val t = Timer(500, heapInfo = true)
     for (doc <- docs.stream) {
       val id = doc.ID
       t.progress(s"$id, ${doc.name}")
+
       for (tf <- doc.termFrequencies) {
         val term = tf._1
         val freq = tf._2
@@ -56,6 +58,39 @@ class PersistentFreqIndex(path: String, dbPath: String,
     println(s"head: ${index.head}")
     println(s"size: ${index.size}")
     index
+  }
+
+  /**
+    * test different data structures for performance. It turns out that List and ListBuffer with prepend are the fastest.
+    * @param path
+    * @param options
+    * @return
+    */
+  def createIndex2(path: String, options: TipsterOptions = TipsterOptions()): mutable.Map[String, List[FreqPosting]] = {
+    val docs = new TipsterStreamSmart(path, options)
+    val index = mutable.Map[String, mutable.ListBuffer[FreqPosting]]()
+    println(s"*** ${index.getClass}")
+    val t = Timer(1000, heapInfo = true)
+    for (doc <- docs.stream) {
+      val id = doc.ID
+      t.progress(s"$id, ${doc.name}")
+      for (tf <- doc.termFrequencies) {
+        val term = tf._1
+        val freq = tf._2
+        val fp = FreqPosting(id, doc.name, freq)
+        // ugly but fast
+        try {
+          index(term) += fp
+        }
+        catch {
+          case ex: java.util.NoSuchElementException => index += term -> mutable.ListBuffer(fp)
+        }
+      }
+    }
+    println(s"completed in ${t.elapsed()} secs")
+    println(s"head: ${index.head}")
+    println(s"size: ${index.size}")
+    index.map(x => x._1 -> x._2.toList)
   }
 
   def makeIndexStructurePersistent(dbPath: String, index: mutable.Map[String, List[FreqPosting]]) = {
@@ -93,14 +128,15 @@ class PersistentFreqIndex(path: String, dbPath: String,
     val v = asString(db.get(bytes(key)))
     if (v == null) List[FreqPosting]()
     else v.split(" ").map {
-      case patEntry(id, name, freq) => new FreqPosting(id.toInt, name, freq.toInt)
+      case patEntry(id, name, freq) => FreqPosting(id.toInt, name, freq.toInt)
     }.toList
   }
 
 
+
   def recreateIndexFromDisk(): mutable.Map[String, List[FreqPosting]] = {
     println("recreating inverted index from db started")
-    var index = mutable.Map[String, List[FreqPosting]]()
+    val index = mutable.Map[String, List[FreqPosting]]()
     val options = new Options()
     options.createIfMissing(true)
     val db = factory.open(new File(dbPath), options)
@@ -122,6 +158,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
     } finally {
       // Make sure you close the iterator to avoid resource leaks.
       iterator.close()
+      db.close()
     }
     println("recreating inverted index from db finished")
     index
