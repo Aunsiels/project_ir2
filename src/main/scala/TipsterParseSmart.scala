@@ -60,6 +60,7 @@ object TipsterParseSmart {
   val nameHash = collection.mutable.Map[Int, String]()
 
   // regular expressions defined statically
+  val Split = """[ .,;:?!*&$\-+\s\(\)]+"""
   val rDate = "^\\d+[/-]\\d+[/-]\\d+$".r -> "<DATE>"
   val rUSPhone = "^\\d{3}\\W\\d+{3}\\W\\d{4}$".r -> "<USPHONE>"
   val rNumber = "^[-]?\\d+([.,]\\d+)*$|^(one|two|three|four)$".r -> "<NUMBER>"
@@ -242,7 +243,7 @@ object TipsterParseSmart {
 
   private val replace = (word: String, tup: (util.matching.Regex, String)) => tup._1.replaceAllIn(word, tup._2)
 
-  // replace lines and quotes right at the beginning
+  // replace lines and quotes right at the beginning. Back-quotes are somewhat tricky, \x60
   private val trim = (word: String) => replace(replace(word, rQuote), rLine).replaceAll("""\x60+""", "")
 
   val stemMap = (word: String) => PorterStemmer.stem(word)
@@ -259,7 +260,7 @@ object TipsterParseSmart {
 
 
   private def tokenizer (text: String, numbers: Boolean, stops: Boolean, stemming: Boolean, chopping: Int): Array[String] =
-    text.split("[ .,;:?!*&$-+\\s]+")
+    text.split(Split)
       .filter(_.length >= 3)
       .map(x => trim(x.toLowerCase))
       .filter(_.length > 0)

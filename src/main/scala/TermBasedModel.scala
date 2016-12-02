@@ -113,7 +113,8 @@ object TermBasedModel {
     val persistentIndex = new PersistentFreqIndex(docPath, dbPath, forceIndexRecreation, options)
    
     val queryParse = QueryParse(queryPath, options)
-    val relelvanceParse = new RelevanceJudgementParse(relevancePath)
+    val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
+    val relevance2 = RelevanceJudgementParse(relevancePath)
  
     val termModel = new TermBasedModel(persistentIndex)
     val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
@@ -129,7 +130,8 @@ object TermBasedModel {
     termModel.convertScoresToSetOfDocNames(cosineDistances).foreach{
       cosineDistance =>
         println(cosineDistance)
-        val stat = Evaluation.getStat(cosineDistance._2, relelvanceParse.getRelevantDocsForQuery(cosineDistance._1.toInt), 1)
+        val stat_old = Evaluation.getStat(cosineDistance._2, relevanceParse.getRelevantDocsForQuery(cosineDistance._1.toInt), 1)
+        val stat = Evaluation.getStat(cosineDistance._2, relevance2.docs(cosineDistance._1), 1)
         println(stat)
     }
     
