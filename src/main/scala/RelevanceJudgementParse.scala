@@ -53,10 +53,10 @@ case class RelevanceJudgementParse(fname: String) {
   val queryAndDocs = queries.toMap[Int, List[String]]
 
   /**
-    * two simple access functions
+    * three simple access functions
     */
-  def docs(queryId: Int): Set[String] = queries(queryId).toSet
-  def docs(queryId: String): Set[String] = queries(queryId.toInt).toSet
+  def docs(queryId: String): List[String] = queries(queryId.toInt)
+  def docs : collection.mutable.Map[Int, List[String]] = queries
 }
 
 object RelevanceJudgementParse {

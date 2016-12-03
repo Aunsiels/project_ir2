@@ -66,7 +66,7 @@ object TestQueriesAndPersistency {
 
   def TestOne(queryId: Int, token: String, relDocs: RelevanceJudgementParse): Unit = {
     val docs89 = getDB(token).sorted
-    val relevance89 = relDocs.docs(queryId)
+    val relevance89 = relDocs.docs((queryId)).toSet
 
     val docsSet = docs89.map(x => x.name).toSet
     val diff2 = relevance89 -- docsSet
