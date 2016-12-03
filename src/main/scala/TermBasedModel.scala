@@ -104,7 +104,7 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
 object TermBasedModel {
   def main(args: Array[String]): Unit = {
      
-    val options = TipsterOptions(maxDocs = 40000, chopping = -1)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
