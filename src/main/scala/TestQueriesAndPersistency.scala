@@ -24,7 +24,8 @@ object TestQueriesAndPersistency {
     val v = asString(db.get(bytes(key)))
     if (v == null) List[FreqPosting]()
     else v.split(" ").map {
-      case patEntry(id, name, freq) => FreqPosting(id.toInt, name, freq.toInt)
+      //case patEntry(id, name, freq) => FreqPosting(id.toInt, name, freq.toInt)
+      case patEntry(id, freq) => FreqPosting(id.toInt, freq.toInt)
     }.toList
   }
 
@@ -68,14 +69,14 @@ object TestQueriesAndPersistency {
     val docs89 = getDB(token).sorted
     val relevance89 = relDocs.docs((queryId)).toSet
 
-    val docsSet = docs89.map(x => x.name).toSet
+    /*val docsSet = docs89.map(x => x.name).toSet
     val diff2 = relevance89 -- docsSet
     val diff1 = docsSet -- relevance89
     val inter = docsSet intersect relevance89
     println(s"relevant ${relevance89.size}, docs ${docsSet.size}")
     println(s"docs intersect rel ${inter.size} $inter")
     println(s"docs - rel ${diff1.size} $diff1")
-    println(s"rel - docs ${diff2.size} $diff2")
+    println(s"rel - docs ${diff2.size} $diff2")*/
 
   }
 }

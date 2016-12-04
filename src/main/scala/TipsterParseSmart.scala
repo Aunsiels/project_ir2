@@ -15,15 +15,16 @@ class TipsterParseSmart(is: InputStream,
                         reduceNumbers: Boolean = true,
                         reduceStopWords: Boolean = true,
                         stemming: Boolean = true,
-                        chopping: Integer = -1) extends TipsterParse(is) {
+                        chopping: Integer = -1,
+                        ngramSize: Integer = 0) extends TipsterParse(is) {
 
   def this(is: InputStream, options: TipsterOptions) =
-    this(is, options.numbers, options.stopWords, options.stemming, options.chopping)
+    this(is, options.numbers, options.stopWords, options.stemming, options.chopping, options.ngramSize)
 
 
   override def ID = this.name.hashCode()
 
-  override def tokens = TipsterParseSmart.tokenize(content, reduceNumbers, reduceStopWords, stemming, chopping)
+  override def tokens = TipsterParseSmart.tokenize(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize)
 
   /**
     * Compute the term frequencies.
@@ -32,7 +33,7 @@ class TipsterParseSmart(is: InputStream,
     */
   def termFrequencies: Stream[(String, Int)] = {
       val tf = collection.mutable.Map[String, Int]()
-      TipsterParseSmart.tokenizer(content, reduceNumbers, reduceStopWords, stemming, chopping)
+      TipsterParseSmart.tokenizer(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize)
         .foreach(t => {
           tf += t -> (1 + tf.getOrElse(t, 1))
         })
@@ -259,7 +260,7 @@ object TipsterParseSmart {
   }
 
 
-  private def tokenizer (text: String, numbers: Boolean, stops: Boolean, stemming: Boolean, chopping: Int): Array[String] =
+  private def tokenizer (text: String, numbers: Boolean, stops: Boolean, stemming: Boolean, chopping: Int, ngramSize: Int = 0): Array[String] = {
     text.split(Split)
       .filter(_.length >= 3)
       .map(x => trim(x.toLowerCase))
@@ -269,8 +270,26 @@ object TipsterParseSmart {
       .map(x => if (stemming) stemMap(x) else x)
       .filter(_.length > 0)
       .map(x => if (0 < chopping && chopping < x.length) x.substring(0, chopping) else x)
+      .map(x => if (ngramSize > 0) ngrams(x, ngramSize) else Array(x)).flatten
+      
+    /*var tokenizedText = 
+     * if(ngramSize > 0) {
+      tokenizedText = ngrams(tokenizedText.mkString(" "), ngramSize)
+    }tokenizedText*/
+    
+  }      
 
-
+  def ngrams(text : String, n : Int) : Array[String] = {
+    if (n<1 || text.length<n) Array[String](text)
+    else {
+      var ngrams = Array[String]()
+      for (ngram <- text.sliding(n)) {
+        ngrams = ngrams :+ ngram
+      }
+      ngrams
+    }
+  }
+      
   private def testTokenize(text: String, numbers: Boolean, stops: Boolean, stemming: Boolean, chopping: Int): Array[String] = {
     val a = text.split("[ .,;:?!*&$-+\\s]+").filter(_.length >= 3)
     val b = a.map(x => trim(x.toLowerCase))
@@ -295,24 +314,29 @@ object TipsterParseSmart {
     * @return a List of tokens
     */
   def tokenize(text: String,
-                numbers: Boolean = true, stops: Boolean = true, stemming: Boolean = true, chopping: Int = -1): List[String] =
-    tokenizer(text, numbers, stops, stemming, chopping).toList
+                numbers: Boolean = true, stops: Boolean = true, stemming: Boolean = true, chopping: Int = -1, ngramSize: Int = 0): List[String] =
+    tokenizer(text, numbers, stops, stemming, chopping, ngramSize).toList
 
   def tokenize(text: String, options: TipsterOptions): List[String] =
-    tokenizer(text, options.numbers, options.stopWords, options.stemming, options.chopping).toList
+    tokenizer(text, options.numbers, options.stopWords, options.stemming, options.chopping, options.ngramSize).toList
 
+  
   def main(args: Array[String]) {
 
     val inf = InputFiles(args)
     val fname = inf.DocPath + "AP880212-0006"
     
-    val parse = new TipsterParseSmart(DocStream.getStream(fname))
+    val options = TipsterOptions(maxDocs = 10, ngramSize = 3)
+    val parse = new TipsterParseSmart(DocStream.getStream(fname), options)
     val title = parse.title
     println(title)
     println("DocID = " + parse.ID)
     println("Date  = " + parse.date)
     println("tokens = " + parse.tokens)
     println(s"tokenset size ${parse.tokens.toSet.size}")
-
+    parse.termFrequencies.foreach{
+      ngram =>
+        println(ngram)
+    }
   }
 }

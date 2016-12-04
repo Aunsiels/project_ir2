@@ -25,7 +25,8 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
        freqPosting => 
        val tf = freqPosting.freq
        val tfidf = math.log(1 + tf) * idf
-       docVectorNorms(freqPosting.name) += (tfidf * tfidf)
+       val docName = idx.getDocName(freqPosting.id)
+       docVectorNorms(docName) += (tfidf * tfidf)
      }
   }
   
@@ -49,11 +50,12 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
         val df = idxList.size
         val idf = math.log(nDocs / df)
         idxList.foreach{
-          idx => 
-          val tfdoc = idx.freq
+          index => 
+          val tfdoc = index.freq
           val tfidfdoc = math.log(1 + tfdoc) * idf
           val tfidfquery = math.log(1 + queryTerm._2) * idf
-          cosineDistanceMap += idx.name -> (cosineDistanceMap.getOrElse(idx.name, 0.0) + (tfidfdoc * tfidfquery)) 
+          val docName = idx.getDocName(index.id)
+          cosineDistanceMap += docName -> (cosineDistanceMap.getOrElse(docName, 0.0) + (tfidfdoc * tfidfquery)) 
         }
       }      
     }
@@ -82,10 +84,11 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
         val df = idxList.size
         val idf = math.log(nDocs / df)
         idxList.foreach{
-          idx => 
-          val tf = idx.freq
+          index => 
+          val tf = index.freq
           val tfidf = math.log(1 + tf) * idf
-          scoreMap += idx.name -> (scoreMap.getOrElse(idx.name, 0.0) + tfidf) 
+          val docName = idx.getDocName(index.id)
+          scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + tfidf) 
         }
       }      
     }
@@ -104,7 +107,7 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
 object TermBasedModel {
   def main(args: Array[String]): Unit = {
      
-    val options = TipsterOptions(maxDocs = 100000, chopping = -1)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 3)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
@@ -116,23 +119,35 @@ object TermBasedModel {
    
     val queryParse = QueryParse(queryPath, options)
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
-    val relevance2 = RelevanceJudgementParse(relevancePath)
+    val relevance = RelevanceJudgementParse(relevancePath)
  
     val termModel = new TermBasedModel(persistentIndex)
-    val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
     
-    termModel.computeTfIdfScoresForQuery(sampleQuery)
+    /*val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
+    println(sampleQuery) 
+    var result = termModel.computeTfIdfScoresForQuery(sampleQuery)
+    println(result)
+    println(result.size)*/
+    
+    //println(queryParse.queries.slice(7,8))
+    //val tfIdfScores = termModel.getTfIdfScores(queryParse.queries.slice(7,8))
+    //val tfIdfScores = termModel.getTfIdfScores(queryParse.queries)
+    /*println(tfIdfScores.size)
+    println(tfIdfScores)
+    println(relevance.docs(71))*/
     
     val tfIdfScores = termModel.getTfIdfScores(queryParse.queries)
-    
     termModel.convertScoresToListOfDocNames(tfIdfScores).foreach{
       tfIdfScore =>
         println("Score for query: " + tfIdfScore._1)
-        val stat = Evaluation.getStat(tfIdfScore._2, relevance2.docs(tfIdfScore._1), 1)
+        val stat = Evaluation.getStat(tfIdfScore._2, relevance.docs(tfIdfScore._1), 1)
         println(stat)
-    }   
+    }
+    val overallStatTfIdfScores = Evaluation.getStat(termModel.convertScoresToListOfDocNames(tfIdfScores), relevance.docs, 1.0)
+    println("Overall Stats TfIdfScores: ")
+    println(overallStatTfIdfScores)
     
-    termModel.computeCosineDistancesForQuery(sampleQuery)
+    /*termModel.computeCosineDistancesForQuery(sampleQuery)
     
     val cosineDistances = termModel.getCosineDistances(queryParse.queries)
     
@@ -147,8 +162,6 @@ object TermBasedModel {
     println("Overall Stats CosineDistances: ")
     println(overallStatsCosineDistances)
         
-    val overallStatTfIdfScores = Evaluation.getStat(termModel.convertScoresToListOfDocNames(tfIdfScores), relevance2.docs, 1.0)
-    println("Overall Stats TfIdfScores: ")
-    println(overallStatTfIdfScores)
+    */
   }
 }

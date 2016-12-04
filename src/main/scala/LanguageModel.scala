@@ -9,8 +9,9 @@ class LanguageModel(idx : PersistentFreqIndex) {
      var cf = index._2.map(freqPosting => freqPosting.freq).sum
      index._2.foreach{
        freqPosting => 
-       sumTFPerDoc += freqPosting.name -> (sumTFPerDoc.getOrElse(freqPosting.name, 0.0) + freqPosting.freq)
-       sumCFPerDoc += freqPosting.name -> (sumCFPerDoc.getOrElse(freqPosting.name, 0.0) + cf)
+       val docName = idx.getDocName(freqPosting.id)
+       sumTFPerDoc += docName -> (sumTFPerDoc.getOrElse(docName, 0.0) + freqPosting.freq)
+       sumCFPerDoc += docName -> (sumCFPerDoc.getOrElse(docName, 0.0) + cf)
      }
   }
   
@@ -26,9 +27,10 @@ class LanguageModel(idx : PersistentFreqIndex) {
         var cf = idxList.map(freqPosting => freqPosting.freq).sum
         if(idxList.nonEmpty) {
           idxList.foreach{
-            idx =>
-              var Pwd = (1 - lambda) * math.log(idx.freq / sumTFPerDoc(idx.name)) + lambda * (cf / sumCFPerDoc(idx.name))
-              scoreMap += idx.name -> (scoreMap.getOrElse(idx.name, 0.0) + Pwd) 
+            index =>
+              val docName = idx.getDocName(index.id)
+              var Pwd = (1 - lambda) * math.log(index.freq / sumTFPerDoc(docName)) + lambda * (cf / sumCFPerDoc(docName))
+              scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd) 
           }
           
         }

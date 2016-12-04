@@ -13,8 +13,11 @@ import org.fusesource.leveldbjni.JniDBFactory._
 import scala.collection.mutable
 import scala.util.Success
 
+import scala.collection.mutable.Map
 
-case class FreqPosting(id: Int, name: String, freq: Int) extends Ordered[FreqPosting] {
+
+//case class FreqPosting(id: Int, name: String, freq: Int) extends Ordered[FreqPosting] {
+case class FreqPosting(id: Int, freq: Int) extends Ordered[FreqPosting] {
   def compare(that: FreqPosting) = this.id compare that.id
 }
 
@@ -22,6 +25,8 @@ class PersistentFreqIndex(path: String, dbPath: String,
                           forceIndexRecreation: Boolean,
                           options: TipsterOptions = TipsterOptions()) extends InvertedIndex[FreqResult] {
 
+  var docHashMap = Map[Int, String]()
+    
   val index: mutable.Map[String, List[FreqPosting]] = {
     //if db does not exist or if we force a recreation
     if (forceIndexRecreation) {
@@ -34,23 +39,26 @@ class PersistentFreqIndex(path: String, dbPath: String,
   }
 
   if (forceIndexRecreation) {
-    makeIndexStructurePersistent(dbPath, this.index)
+    makeIndexStructurePersistent(dbPath, this.index, this.docHashMap)
   }
 
   println("index contains term frequencies from totally " + getAmountOfDocsInIndex() + " documents")
 
   def createIndex(path: String, options: TipsterOptions = TipsterOptions()): mutable.Map[String, List[FreqPosting]] = {
     val docs = new TipsterStreamSmart(path, options)
+    
     val index = mutable.Map[String, List[FreqPosting]]()
     val t = Timer(500, heapInfo = true)
     for (doc <- docs.stream) {
       val id = doc.ID
+      docHashMap += doc.ID -> doc.name
       t.progress(s"$id, ${doc.name}")
 
       for (tf <- doc.termFrequencies) {
         val term = tf._1
         val freq = tf._2
-        val fposts = FreqPosting(id, doc.name, freq) :: index.getOrElse(term, List[FreqPosting]())
+        //val fposts = FreqPosting(id, doc.name, freq) :: index.getOrElse(term, List[FreqPosting]())
+        val fposts = FreqPosting(id, freq) :: index.getOrElse(term, List[FreqPosting]())
         index += term -> fposts
       }
     }
@@ -77,7 +85,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
       for (tf <- doc.termFrequencies) {
         val term = tf._1
         val freq = tf._2
-        val fp = FreqPosting(id, doc.name, freq)
+        val fp = FreqPosting(id, freq)
         // ugly but fast
         try {
           index(term) += fp
@@ -93,7 +101,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
     index.map(x => x._1 -> x._2.toList)
   }
 
-  def makeIndexStructurePersistent(dbPath: String, index: mutable.Map[String, List[FreqPosting]]) = {
+  def makeIndexStructurePersistent(dbPath: String, index: Map[String, List[FreqPosting]], docMap: Map[Int, String]) = {
     println("storing inverted index in db started")
     val options = new Options()
     var dbFile = new File(dbPath)
@@ -106,6 +114,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
         case (d, lst) =>
           db.put(bytes(d), bytes(lst.mkString(" ").replace("FreqPosting", "")))
       }
+      db.put(bytes("ID_Hash"), bytes(docMap.mkString(",")))
     } finally {
       db.close()
     }
@@ -128,7 +137,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
     val v = asString(db.get(bytes(key)))
     if (v == null) List[FreqPosting]()
     else v.split(" ").map {
-      case patEntry(id, name, freq) => FreqPosting(id.toInt, name, freq.toInt)
+      case patEntry(id, name, freq) => FreqPosting(id.toInt, freq.toInt)
     }.toList
   }
 
@@ -145,14 +154,27 @@ class PersistentFreqIndex(path: String, dbPath: String,
       iterator.seekToFirst()
       while (iterator.hasNext()) {
         val key = asString(iterator.peekNext().getKey())
-        val value = asString(iterator.peekNext().getValue())
-        val postingStringList = value.split(" ")
-        val postings = postingStringList.map(
-          psl => FreqPosting(
-            psl.substring(1, psl.length - 1).split(",")(0).toInt,
-            psl.substring(1, psl.length - 1).split(",")(1),
-            psl.substring(1, psl.length - 1).split(",")(2).toInt)).toList
-        index += key -> postings
+        if(key == "ID_Hash") {
+          val value = asString(iterator.peekNext().getValue())
+          val idHashStringList = value.split(",")
+          idHashStringList.foreach{
+            idHash =>
+              var idHashArray = idHash.split(" -> ")
+              var id = idHashArray(0)
+              var hash = idHashArray(1)
+              docHashMap += id.toInt -> hash
+          }
+        } else {
+          val value = asString(iterator.peekNext().getValue())
+          val postingStringList = value.split(" ")
+          val postings = postingStringList.map(
+            psl => FreqPosting(
+              psl.substring(1, psl.length - 1).split(",")(0).toInt,
+              psl.substring(1, psl.length - 1).split(",")(1).toInt)).toList
+              //psl.substring(1, psl.length - 1).split(",")(1),
+              //psl.substring(1, psl.length - 1).split(",")(2).toInt)).toList
+          index += key -> postings        
+        }
         iterator.next()
       }
     } finally {
@@ -177,7 +199,12 @@ class PersistentFreqIndex(path: String, dbPath: String,
   }
 
   def getDocNamesInIndex(): Set[String] = {
-    this.index.flatMap(index => index._2.map(fp => fp.name)).toSet
+    //this.index.flatMap(index => index._2.map(fp => fp.name)).toSet
+    this.docHashMap.map(idName => idName._2).toSet
+  }
+  
+  def getDocName(id: Int): String = {
+    this.docHashMap.getOrElse(id, "")
   }
 }
 
@@ -185,7 +212,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
 object PersistentFreqIndex {
   def main(args: Array[String]): Unit = {
 
-    val options = TipsterOptions(maxDocs = 100000)
+    val options = TipsterOptions(maxDocs = 100000, ngramSize = 3)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database

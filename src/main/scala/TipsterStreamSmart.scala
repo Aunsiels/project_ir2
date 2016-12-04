@@ -20,16 +20,17 @@ class TipsterStreamSmart(val path: String,
                          val stopWords: Boolean = true,
                          val stemming: Boolean = true,
                          val chopping: Int = -1,
-                         val maxDocs: Integer = Int.MaxValue
+                         val maxDocs: Integer = Int.MaxValue,
+                         val ngramSize: Integer = 0
                          ) extends TipsterStream(path, "") {
 
   def this(path: String, options: TipsterOptions) =
-    this(path, options.numbers, options.stopWords, options.stemming, options.chopping, options.maxDocs)
+    this(path, options.numbers, options.stopWords, options.stemming, options.chopping, options.maxDocs, options.ngramSize)
 
 
   override def stream : Stream[TipsterParseSmart] =
     unparsed.stream.slice(0, maxDocs).map(is => new TipsterParseSmart(is, reduceNumbers = numbers,
-      reduceStopWords = stopWords, stemming = stemming, chopping = chopping))
+      reduceStopWords = stopWords, stemming = stemming, chopping = chopping, ngramSize = ngramSize))
 
 
   /**
