@@ -191,7 +191,8 @@ class PersistentFreqIndex(path: String, dbPath: String,
 
 
   def getAmountOfDocsInIndex(): Int = {
-    this.index.flatMap(index => index._2.map(fp => fp.id)).toSet.size
+    //this.index.flatMap(index => index._2.map(fp => fp.id)).toSet.size
+    this.docHashMap.size
   }
 
   def getDocIdsInIndex(): Set[Int] = {
@@ -212,7 +213,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
 object PersistentFreqIndex {
   def main(args: Array[String]): Unit = {
 
-    val options = TipsterOptions(maxDocs = 100000, ngramSize = 3)
+    val options = TipsterOptions(maxDocs = 100000, ngramSize = 4)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database

@@ -107,7 +107,7 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
 object TermBasedModel {
   def main(args: Array[String]): Unit = {
      
-    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 3)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 4)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
@@ -129,12 +129,17 @@ object TermBasedModel {
     println(result)
     println(result.size)*/
     
-    //println(queryParse.queries.slice(7,8))
-    //val tfIdfScores = termModel.getTfIdfScores(queryParse.queries.slice(7,8))
-    //val tfIdfScores = termModel.getTfIdfScores(queryParse.queries)
-    /*println(tfIdfScores.size)
+    /*println(queryParse.queries.slice(7,8))
+    val tfIdfScores = termModel.getTfIdfScores(queryParse.queries.slice(7,8))
     println(tfIdfScores)
-    println(relevance.docs(71))*/
+    println(relevance.docs(71))
+    termModel.convertScoresToListOfDocNames(tfIdfScores).foreach{
+      tfIdfScore =>
+        println(tfIdfScore._2.size)
+        println("Score for query: " + tfIdfScore._1)
+        val stat = Evaluation.getStat(tfIdfScore._2, relevance.docs(tfIdfScore._1), 1)
+        println(stat)
+    }*/
     
     val tfIdfScores = termModel.getTfIdfScores(queryParse.queries)
     termModel.convertScoresToListOfDocNames(tfIdfScores).foreach{
