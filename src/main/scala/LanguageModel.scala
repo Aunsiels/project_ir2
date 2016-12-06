@@ -1,9 +1,11 @@
 import scala.collection.mutable.Map
 
-class LanguageModel(idx : PersistentFreqIndex) {
+class LanguageModel(idx : PersistentFreqIndex, 
+                    path : String, 
+                    options: TipsterOptions = TipsterOptions()) extends ScoringModel {
   
   var sumTFPerDoc = Map[String, Double]() //sum of the term frequencies of all terms in a document
-  var sumCFPerDoc = Map[String, Double]() //sum of the corpus frequencies of all terms in a document 
+  var collectionFrequencies = idx.index.map(termFPs => (termFPs._1, termFPs._2.map(fps => (fps.freq)).sum))
   idx.index.foreach{
      index => 
      var cf = index._2.map(freqPosting => freqPosting.freq).sum
@@ -11,38 +13,35 @@ class LanguageModel(idx : PersistentFreqIndex) {
        freqPosting => 
        val docName = idx.getDocName(freqPosting.id)
        sumTFPerDoc += docName -> (sumTFPerDoc.getOrElse(docName, 0.0) + freqPosting.freq)
-       sumCFPerDoc += docName -> (sumCFPerDoc.getOrElse(docName, 0.0) + cf)
      }
   }
+  var nTermsInAllDocuments = sumTFPerDoc.map(docFreq => docFreq._2).sum
   
-  def getScores(queries : Map[String, List[String]], lambda : Double) : Map[String, Seq[(String, Double)]] =  {
-    queries.map(query => (query._1, computeScoreForQuery(query._2, lambda)))
+  override def getScores(queries: Map[String, List[String]], scoringOptions : ScoringModelOptions) : Map[String, Seq[(String, Double)]] =  {
+    queries.map(query => (query._1, computeScoreForQuery(query._2, scoringOptions)))
   }
   
-  def computeScoreForQuery(query : List[String], lambda : Double) : Seq[(String, Double)] = {
+  override def computeScoreForQuery(query : List[String], scoringOptions : ScoringModelOptions) : Seq[(String, Double)] = {
     var scoreMap = Map[String, Double]()
     query.foreach{
       queryTerm => 
-        val idxList = idx.index.getOrElse(queryTerm, List()) 
+        val idxList = idx.index.getOrElse(queryTerm, List())
         var cf = idxList.map(freqPosting => freqPosting.freq).sum
         if(idxList.nonEmpty) {
           idxList.foreach{
             index =>
               val docName = idx.getDocName(index.id)
-              var Pwd = (1 - lambda) * math.log(index.freq / sumTFPerDoc(docName)) + lambda * (cf / sumCFPerDoc(docName))
+              var Pwd = math.log(1.0 + 
+                    ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / sumTFPerDoc(docName).toDouble))
+                    / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments.toDouble)))
               scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd) 
           }
-          
         }
     }
-    val result = scoreMap.toSeq.sortWith(_._2 < _._2).take(100)
-    //println(result.size)
+    val result = scoreMap.toSeq.sortWith(_._2 > _._2).take(100)
     result
   }
   
-  def convertScoresToListOfDocNames(scores : Map[String, Seq[(String, Double)]]) : Map[Int, List[String]] =  {
-    scores.map(scores => (scores._1.toInt, scores._2.map(tuple => tuple._1).toList))
-  }
 }
 
 object LanguageModel {
@@ -62,13 +61,15 @@ object LanguageModel {
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
     val relevance2 = RelevanceJudgementParse(relevancePath)
  
-    val languageModel = new LanguageModel(persistentIndex)
+    val languageModel = new LanguageModel(persistentIndex, docPath, options)
     val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
     
     var lambda = 0.1
-    languageModel.computeScoreForQuery(sampleQuery, lambda)
+    var nDocsToBeReturned = 100
+    val scoringOptions = new ScoringModelOptions(lambda = lambda, nDocsToBeReturned = nDocsToBeReturned)
+    languageModel.computeScoreForQuery(sampleQuery, scoringOptions)
     
-    val scores = languageModel.getScores(queryParse.queries, lambda)
+    val scores = languageModel.getScores(queryParse.queries, scoringOptions)
     
     languageModel.convertScoresToListOfDocNames(scores).foreach{
       tfIdfScore =>

@@ -5,12 +5,37 @@
 import scala.collection.mutable
 import scala.collection.mutable.Map
 
-case class TfIdfVector(docId: String, rel: String) 
+case class TfIdfVector(docId: String, rel: String)
+case class TermFreqPosting(term: String, freq: Int) extends Ordered[TermFreqPosting] {
+  def compare(that: TermFreqPosting) = this.term compare that.term
+}
 
-class TermBasedModel(idx : PersistentFreqIndex)  {
+class TermBasedModel(idx : PersistentFreqIndex, 
+                    path : String, 
+                    options: TipsterOptions = TipsterOptions()) extends ScoringModel {
  
+  var forwardIndex = Map[String, List[TermFreqPosting]]()
+  
   var nDocs = idx.getAmountOfDocsInIndex()
-  //println("Amount of Documents in Index: " + nDocs) 
+  
+  var docMaxFrequency = Map[String, Double]()
+  idx.getDocNamesInIndex().foreach{
+     docName => 
+     docMaxFrequency += docName -> 0.0           
+  }
+  idx.index.foreach{
+     index => 
+     index._2.foreach{
+       freqPosting => 
+       val docName = idx.getDocName(freqPosting.id)
+       if(freqPosting.freq > docMaxFrequency.getOrElse(docName, 0.0)) {
+         docMaxFrequency(docName) = freqPosting.freq
+       }
+       //forwardIndex(docName) = forwardIndex.getOrElse(docName, List()) ++ List(TermFreqPosting(index._1, freqPosting.freq))
+     }
+  }  
+  
+  println("forwardIndex created")
    
   var docVectorNorms = Map[String, Double]()
   idx.getDocNamesInIndex().foreach{
@@ -32,11 +57,22 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
   
   docVectorNorms = docVectorNorms.map(norms => (norms._1, math.sqrt(norms._2)))
   
-  def getCosineDistances(queries : Map[String, List[String]]) : Map[String, Seq[(String, Double)]] = {
-    queries.map(query => (query._1, computeCosineDistancesForQuery(query._2)))
+  override def getScores(queries: Map[String, List[String]], scoringOptions : ScoringModelOptions) : Map[String, Seq[(String, Double)]] =  {
+    queries.map(query => (query._1, computeScoreForQuery(query._2, scoringOptions)))
   }
   
-  def computeCosineDistancesForQuery(query : List[String]) : Seq[(String, Double)] = {
+  override def computeScoreForQuery(query : List[String], scoringOptions : ScoringModelOptions) : Seq[(String, Double)] = {
+    if(scoringOptions.scoringMethod == "TFIDF") {
+      computeTfIdfScoresForQuery(query, scoringOptions.nDocsToBeReturned)
+    } else if(scoringOptions.scoringMethod == "COSINEDISTANCE") {
+      this.computeCosineDistancesForQuery(query, scoringOptions.nDocsToBeReturned) 
+    }
+    else {
+      Seq[(String, Double)]()
+    }
+  }
+  
+  def computeCosineDistancesForQuery(query : List[String], nDocsToReturn : Int) : Seq[(String, Double)] = {
     val queryTermFrequency = query.groupBy(identity).mapValues(t => t.length)
     //println("computing score for query terms: " + queryTermFrequency)
     var cosineDistanceMap = Map[String, Double]()
@@ -64,18 +100,19 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
     //println(cosineDistanceMap)
     cosineDistanceMap = cosineDistanceMap.map(idDist => (idDist._1, idDist._2 / (queryVectorNorm * docVectorNorms(idDist._1))))
     //println(cosineDistanceMap)
-    val result = cosineDistanceMap.toSeq.sortWith(_._2 > _._2).take(100)
+    val result = cosineDistanceMap.toSeq.sortWith(_._2 > _._2).take(nDocsToReturn)
     //val result = cosineDistanceMap.toSeq.sortWith(_._2 > _._2)
     //println(result)
     result
   }
   
-  def getTfIdfScores(queries : Map[String, List[String]]) : Map[String, Seq[(String, Double)]] =  {
-    queries.map(query => (query._1, computeTfIdfScoresForQuery(query._2)))
-  }
-  
-  def computeTfIdfScoresForQuery(query : List[String]) : Seq[(String, Double)] = {
+  def computeTfIdfScoresForQuery(query : List[String], nDocsToReturn : Int) : Seq[(String, Double)] = {
     //println("computing score for query terms: " + query)
+    
+    if(idx.index.size == 0) {
+      //TODO: need to run the scoring directly on the stream
+    }
+    
     var scoreMap = Map[String, Double]()
     query.foreach{
       queryTerm => 
@@ -85,29 +122,38 @@ class TermBasedModel(idx : PersistentFreqIndex)  {
         val idf = math.log(nDocs / df)
         idxList.foreach{
           index => 
-          val tf = index.freq
-          val tfidf = math.log(1 + tf) * idf
           val docName = idx.getDocName(index.id)
+          val tf = index.freq
+          //val tfNorm = (tf / docMaxFrequency(docName))
+          val augmentedTf = (0.5 + (0.5 * (tf / docMaxFrequency(docName)))) 
+          //val tfidf = math.log(1 + tfNorm) * idf
+          val tfidf = augmentedTf * idf
           scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + tfidf) 
         }
       }      
     }
-    val result = scoreMap.toSeq.sortWith(_._2 > _._2).take(100)
+    val result = scoreMap.toSeq.sortWith(_._2 > _._2).take(nDocsToReturn)
     //val result = scoreMap.toSeq.sortWith(_._2 > _._2)
     //println(result)
     result
   }
   
-  def convertScoresToListOfDocNames(scores : Map[String, Seq[(String, Double)]]) : Map[Int, List[String]] =  {
-    scores.map(scores => (scores._1.toInt, scores._2.map(tuple => tuple._1).toList))
+  def queryExpansion(origQueries : Map[String, List[String]], relevantDocs : Map[Int, List[String]], nDocsToAdd : Int) :  Map[String, List[String]] = {
+    origQueries.map(
+      origQuery => (origQuery._1 -> (
+        relevantDocs(origQuery._1.toInt).map(
+          relevantDocForQuery =>
+            origQuery._2 ++ forwardIndex(relevantDocForQuery).sortBy(termFP => termFP.freq).take(nDocsToAdd).map(termFP => termFP.term)
+        )
+       ).flatten)
+    )
   }
-  
 }
 
 object TermBasedModel {
   def main(args: Array[String]): Unit = {
      
-    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 4)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 0)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
@@ -121,52 +167,39 @@ object TermBasedModel {
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
     val relevance = RelevanceJudgementParse(relevancePath)
  
-    val termModel = new TermBasedModel(persistentIndex)
+    val termModel = new TermBasedModel(persistentIndex, docPath, options)
+     
+    val nDocsToBeReturned = 100
+    val scoringMethod = "TFIDF"
+    val scoringOptions = new ScoringModelOptions(
+        nDocsToBeReturned = nDocsToBeReturned,
+        scoringMethod = scoringMethod)
     
-    /*val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
+    /*val sampleQuery = TipsterParseSmart.tokenize("along aircraft dead whereabout adasdsdfasd", options)
     println(sampleQuery) 
-    var result = termModel.computeTfIdfScoresForQuery(sampleQuery)
+    var result = termModel.computeScoreForQuery(sampleQuery, scoringOptions)
     println(result)
     println(result.size)*/
     
-    /*println(queryParse.queries.slice(7,8))
-    val tfIdfScores = termModel.getTfIdfScores(queryParse.queries.slice(7,8))
-    println(tfIdfScores)
-    println(relevance.docs(71))
-    termModel.convertScoresToListOfDocNames(tfIdfScores).foreach{
-      tfIdfScore =>
-        println(tfIdfScore._2.size)
-        println("Score for query: " + tfIdfScore._1)
-        val stat = Evaluation.getStat(tfIdfScore._2, relevance.docs(tfIdfScore._1), 1)
-        println(stat)
-    }*/
-    
-    val tfIdfScores = termModel.getTfIdfScores(queryParse.queries)
-    termModel.convertScoresToListOfDocNames(tfIdfScores).foreach{
+    var scores = termModel.getScores(queryParse.queries, scoringOptions)
+    termModel.convertScoresToListOfDocNames(scores).foreach{
       tfIdfScore =>
         println("Score for query: " + tfIdfScore._1)
+        println("relevant docs: " + relevance.docs(tfIdfScore._1))
+        println("proposed docs: " + tfIdfScore._2)
         val stat = Evaluation.getStat(tfIdfScore._2, relevance.docs(tfIdfScore._1), 1)
         println(stat)
     }
-    val overallStatTfIdfScores = Evaluation.getStat(termModel.convertScoresToListOfDocNames(tfIdfScores), relevance.docs, 1.0)
-    println("Overall Stats TfIdfScores: ")
-    println(overallStatTfIdfScores)
+    val overallStat = Evaluation.getStat(termModel.convertScoresToListOfDocNames(scores), relevance.docs, 1.0)
+    println("Overall Stats: ")
+    println(overallStat)
     
-    /*termModel.computeCosineDistancesForQuery(sampleQuery)
-    
-    val cosineDistances = termModel.getCosineDistances(queryParse.queries)
-    
-    termModel.convertScoresToListOfDocNames(cosineDistances).foreach{
-      cosineDistance =>
-        println("Score for query: " + cosineDistance._1)
-        val stat = Evaluation.getStat(cosineDistance._2, relevance2.docs(cosineDistance._1), 1)
-        println(stat)
-    }
-    
-    val overallStatsCosineDistances = Evaluation.getStat(termModel.convertScoresToListOfDocNames(cosineDistances), relevance2.docs, 1.0)
-    println("Overall Stats CosineDistances: ")
-    println(overallStatsCosineDistances)
-        
-    */
+     
+    /*var tfIdfScores = termModel.getScores(queryParse.queries, scoringOptions)
+    var nTermsToIncludeInQuery = 10
+    //var expandedQueries = termModel.queryExpansion(queryParse.queries, termModel.convertScoresToListOfDocNames(tfIdfScores), nTermsToIncludeInQuery)
+    println("queries expanded")
+    //tfIdfScores = termModel.getTfIdfScores(expandedQueries, nDocsToReturn)
+    //println(expandedQueries)*/
   }
 }
