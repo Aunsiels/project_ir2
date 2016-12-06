@@ -12,10 +12,14 @@ import ch.ethz.dal.tinyir.processing.XMLDocument
 object PerformanceParseSmart {
   def main(args: Array[String]): Unit = {
 
-    val bare, smart = false
-    val compare = true
+    val bare, smart, compare = false
+    val attributes = true
     val inf = InputFiles(args)
     println(s"working on ${inf.DocPath}")
+
+    if (attributes)
+      testAttributes(new TipsterStreamSmart(inf.DocPath))
+
 
     if (compare) {
       compareStreaming(new TipsterStreamSmart(inf.DocPath, numbers = false, stopWords = false, stemming = false))
@@ -81,14 +85,14 @@ object PerformanceParseSmart {
     println("*********")
   }
 
-  def testAttributes(docs: TipsterStreamSmart): Unit = {
+  def testAttributes(docs: TipsterStreamSmart, skipping: Boolean = true): Unit = {
 
     var skip = ""
     val t = Timer(step = 500)
     for (doc <- docs.stream) {
       t.progress(s"${doc.name}")
       val n = doc.name.substring(0, 2)
-      if (n != skip) {
+      if (skip != n) {
         val b = doc.body
         val c = doc.codes
         val t = doc.title
@@ -96,7 +100,8 @@ object PerformanceParseSmart {
         val tokens = doc.tokens
         val tokset = tokens.toSet
         println(s"${doc.name}, $t, $d, tokens.size=${tokens.size}, tokenset=${tokset.size}")
-        skip = n
+        if (skipping)
+          skip = n
       }
     }
   }

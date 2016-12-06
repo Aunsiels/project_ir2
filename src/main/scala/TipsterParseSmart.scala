@@ -3,11 +3,13 @@
 @version
  */
 
-import ch.ethz.dal.tinyir.processing.{TipsterParse, StopWords}
-import java.io.InputStream
+import ch.ethz.dal.tinyir.processing.{StopWords, TipsterParse}
+import java.io.{InputStream, FileInputStream}
 
 import ch.ethz.dal.tinyir.io.DocStream
 import com.github.aztek.porterstemmer.PorterStemmer
+
+import scala.util.{Try, Failure, Success}
 
 
 
@@ -20,6 +22,9 @@ class TipsterParseSmart(is: InputStream,
 
   def this(is: InputStream, options: TipsterOptions) =
     this(is, options.numbers, options.stopWords, options.stemming, options.chopping, options.ngramSize)
+
+  def this(fileName: String, options: TipsterOptions) =
+  this(new FileInputStream(fileName), options)
 
 
   override def ID = this.name.hashCode()
@@ -43,25 +48,36 @@ class TipsterParseSmart(is: InputStream,
   // remember hash codes
   TipsterParseSmart.nameHash += ID -> name
 
+  private val bodyStart = if (body.length > TipsterParseSmart.TitleCutoff)
+    body.substring(0, TipsterParseSmart.TitleCutoff) else body
+
   override def title: String = {
-    val n = name.substring(0, 2) match {
+    // AP|DOE|FR|PT|SJM|WSJ
+    name.substring(0, 2) match {
       case "AP" => read(doc.getElementsByTagName("HEAD")) // AP
-      case "FR" => ""     // read(doc.getElementsByTagName("ITAG"))// FR need tag 7
+      case "DO" => bodyStart
+      case "FR" => bodyStart // read(doc.getElementsByTagName("ITAG"))// FR need tag 7
       case "PT" => read(doc.getElementsByTagName("TTL")) // PT
       case "SJ" => read(doc.getElementsByTagName("HEADLINE")) // SJM
       case "WS" => read(doc.getElementsByTagName("HL"))
-      case _ => ""
+      case "ZF" => read(doc.getElementsByTagName("TITLE"))
+      case _ => bodyStart
     }
-    n.replaceAll("\\s+", " ")
   }
+
+  def titleTokens: Array[String] = TipsterParseSmart.tokenizer(title, reduceNumbers, reduceStopWords,
+    stemming, chopping, ngramSize)
 }
 
+
 object TipsterParseSmart {
+
+  var TitleCutoff = 100
 
   val nameHash = collection.mutable.Map[Int, String]()
 
   // regular expressions defined statically
-  val Split = """[ .,;:?!*&$\-+\s\(\)]+"""
+  val Split = """[ .,;:?!*&$\-+\s\(\)\[\]]+"""
   val rDate = "^\\d+[/-]\\d+[/-]\\d+$".r -> "<DATE>"
   val rUSPhone = "^\\d{3}\\W\\d+{3}\\W\\d{4}$".r -> "<USPHONE>"
   val rNumber = "^[-]?\\d+([.,]\\d+)*$|^(one|two|three|four)$".r -> "<NUMBER>"
@@ -260,8 +276,9 @@ object TipsterParseSmart {
   }
 
 
-  private def tokenizer (text: String, numbers: Boolean, stops: Boolean, stemming: Boolean, chopping: Int, ngramSize: Int = 0): Array[String] = {
-    text.split(Split)
+  private def tokenizer (text: String, numbers: Boolean, stops: Boolean,
+                         stemming: Boolean, chopping: Int, ngramSize: Int = 0): Array[String] = {
+    val toks = text.split(Split)
       .filter(_.length >= 3)
       .map(x => trim(x.toLowerCase))
       .filter(_.length > 0)
@@ -270,14 +287,13 @@ object TipsterParseSmart {
       .map(x => if (stemming) stemMap(x) else x)
       .filter(_.length > 0)
       .map(x => if (0 < chopping && chopping < x.length) x.substring(0, chopping) else x)
-      .map(x => if (ngramSize > 0) ngrams(x, ngramSize) else Array(x)).flatten
-      
-    /*var tokenizedText = 
-     * if(ngramSize > 0) {
-      tokenizedText = ngrams(tokenizedText.mkString(" "), ngramSize)
-    }tokenizedText*/
-    
-  }      
+      .filter(_.length > 0)
+    if (ngramSize > 0)
+      toks.flatMap(ngrams(_, ngramSize))
+    else
+      toks
+  }
+
 
   def ngrams(text : String, n : Int) : Array[String] = {
     if (n<1 || text.length<n) Array[String](text)

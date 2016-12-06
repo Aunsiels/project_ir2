@@ -34,7 +34,12 @@ arguments. `xargs` can be used to solve this problems.
 Extracting a single file from zip:
 
     $ unzip -l documents.zip | grep DOE | more
-    $ unzip -l documents.zip DOE1-01-0128 > DOE1-01-0128.xml
+    $ unzip -l documents.zip DOE1-01-0128
+
+Find all files except:
+
+    $ unzip -l documents.zip | grep -v "AP\|DOE\|FR\|PT\|SJM\|WSJ" | more
+
     
 
 
@@ -201,5 +206,27 @@ However, be careful with methods that aren’t transformers. Calls to the follow
 immediately and can easily cause `java.lang.OutOfMemoryError` errors:
 - stream.max
 - stream.size
-- stream.sum`
+- stream.sum
+
+## Besprechung Michael, Markus 6.12.
+
+- Michael: Abstract Class Model
+- Michael: improve language model
+- Markus: Main programm
+- n-gram word level
+- synonmys using wordnet ?
+
+### Status Update Michael
+
+Also das Language Model hat jetzt auch eine F1-Score von 0.4.
+Es gibt jetzt halt gewisse Dinge welche ich im Model berechne. Dazu gehören:
+- Anzahl Terms über alle Dokumente
+- Anzahl Terms pro Dokument
+- Norm pro Dokument (Summe der einzelnen TFs im Quadrat und die Wurzel davon, den Code findest du im Term-Model)
+- Maximale Term-Frequency pro Dokument
+Das berechne ich jeweils basierend auf dem Index aus der DB. Wir müssen mal schauen ob es nicht besser wäre dafür eine Funktion in TipsterParseSmart zu haben. Gerade wenn wir noch einen Lauf machen müssen ohne Index.
+Gruess
+- Maximale Term-Frequency pro Dokument
+
+Danke 
 
