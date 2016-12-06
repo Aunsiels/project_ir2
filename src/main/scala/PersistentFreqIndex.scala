@@ -6,17 +6,12 @@
 
 import ch.ethz.dal.tinyir.indexing._
 import java.io.File
-
 import org.iq80.leveldb._
 import org.fusesource.leveldbjni.JniDBFactory._
-
-import scala.collection.mutable
 import scala.util.Success
-
 import scala.collection.mutable.Map
+import scala.collection.mutable.ListBuffer
 
-
-//case class FreqPosting(id: Int, name: String, freq: Int) extends Ordered[FreqPosting] {
 case class FreqPosting(id: Int, freq: Int) extends Ordered[FreqPosting] {
   def compare(that: FreqPosting) = this.id compare that.id
 }
@@ -27,7 +22,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
 
   var docHashMap = Map[Int, String]()
     
-  val index: mutable.Map[String, List[FreqPosting]] = {
+  val index: Map[String, List[FreqPosting]] = {
     //if db does not exist or if we force a recreation
     if (forceIndexRecreation) {
       createIndex(path, options)
@@ -44,10 +39,10 @@ class PersistentFreqIndex(path: String, dbPath: String,
 
   println("index contains term frequencies from totally " + getAmountOfDocsInIndex() + " documents")
 
-  def createIndex(path: String, options: TipsterOptions = TipsterOptions()): mutable.Map[String, List[FreqPosting]] = {
+  def createIndex(path: String, options: TipsterOptions = TipsterOptions()): Map[String, List[FreqPosting]] = {
     val docs = new TipsterStreamSmart(path, options)
     
-    val index = mutable.Map[String, List[FreqPosting]]()
+    val index = Map[String, List[FreqPosting]]()
     val t = Timer(500, heapInfo = true)
     for (doc <- docs.stream) {
       val id = doc.ID
@@ -57,7 +52,6 @@ class PersistentFreqIndex(path: String, dbPath: String,
       for (tf <- doc.termFrequencies) {
         val term = tf._1
         val freq = tf._2
-        //val fposts = FreqPosting(id, doc.name, freq) :: index.getOrElse(term, List[FreqPosting]())
         val fposts = FreqPosting(id, freq) :: index.getOrElse(term, List[FreqPosting]())
         index += term -> fposts
       }
@@ -74,9 +68,9 @@ class PersistentFreqIndex(path: String, dbPath: String,
     * @param options
     * @return
     */
-  def createIndex2(path: String, options: TipsterOptions = TipsterOptions()): mutable.Map[String, List[FreqPosting]] = {
+  def createIndex2(path: String, options: TipsterOptions = TipsterOptions()): Map[String, List[FreqPosting]] = {
     val docs = new TipsterStreamSmart(path, options)
-    val index = mutable.Map[String, mutable.ListBuffer[FreqPosting]]()
+    val index = Map[String, ListBuffer[FreqPosting]]()
     println(s"*** ${index.getClass}")
     val t = Timer(1000, heapInfo = true)
     for (doc <- docs.stream) {
@@ -91,7 +85,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
           index(term) += fp
         }
         catch {
-          case ex: java.util.NoSuchElementException => index += term -> mutable.ListBuffer(fp)
+          case ex: java.util.NoSuchElementException => index += term -> ListBuffer(fp)
         }
       }
     }
@@ -143,9 +137,9 @@ class PersistentFreqIndex(path: String, dbPath: String,
 
 
 
-  def recreateIndexFromDisk(): mutable.Map[String, List[FreqPosting]] = {
+  def recreateIndexFromDisk(): Map[String, List[FreqPosting]] = {
     println("recreating inverted index from db started")
-    val index = mutable.Map[String, List[FreqPosting]]()
+    val index = Map[String, List[FreqPosting]]()
     val options = new Options()
     options.createIfMissing(true)
     val db = factory.open(new File(dbPath), options)
@@ -171,8 +165,6 @@ class PersistentFreqIndex(path: String, dbPath: String,
             psl => FreqPosting(
               psl.substring(1, psl.length - 1).split(",")(0).toInt,
               psl.substring(1, psl.length - 1).split(",")(1).toInt)).toList
-              //psl.substring(1, psl.length - 1).split(",")(1),
-              //psl.substring(1, psl.length - 1).split(",")(2).toInt)).toList
           index += key -> postings        
         }
         iterator.next()
@@ -191,7 +183,6 @@ class PersistentFreqIndex(path: String, dbPath: String,
 
 
   def getAmountOfDocsInIndex(): Int = {
-    //this.index.flatMap(index => index._2.map(fp => fp.id)).toSet.size
     this.docHashMap.size
   }
 
@@ -200,7 +191,6 @@ class PersistentFreqIndex(path: String, dbPath: String,
   }
 
   def getDocNamesInIndex(): Set[String] = {
-    //this.index.flatMap(index => index._2.map(fp => fp.name)).toSet
     this.docHashMap.map(idName => idName._2).toSet
   }
   
@@ -213,7 +203,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
 object PersistentFreqIndex {
   def main(args: Array[String]): Unit = {
 
-    val options = TipsterOptions(maxDocs = 100000, ngramSize = 4)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 0)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
