@@ -12,13 +12,14 @@ case class TermFreqPosting(term: String, freq: Int) extends Ordered[TermFreqPost
 
 class TermBasedModel(idx : PersistentFreqIndex, 
                     path : String, 
-                    options: TipsterOptions = TipsterOptions()) extends ScoringModel {
+                    options: TipsterOptions = TipsterOptions(),
+                    useIndex: Boolean) extends ScoringModel {
  
-  var forwardIndex = Map[String, List[TermFreqPosting]]()
-  
-  var nDocs = idx.getAmountOfDocsInIndex()
-  
+  var nDocs = 0
   var docMaxFrequency = Map[String, Double]()
+  var docVectorNorms = Map[String, Double]()
+  
+  nDocs = idx.getAmountOfDocsInIndex()
   idx.getDocNamesInIndex().foreach{
      docName => 
      docMaxFrequency += docName -> 0.0           
@@ -31,13 +32,8 @@ class TermBasedModel(idx : PersistentFreqIndex,
        if(freqPosting.freq > docMaxFrequency.getOrElse(docName, 0.0)) {
          docMaxFrequency(docName) = freqPosting.freq
        }
-       //forwardIndex(docName) = forwardIndex.getOrElse(docName, List()) ++ List(TermFreqPosting(index._1, freqPosting.freq))
      }
-  }  
-  
-  println("forwardIndex created")
-   
-  var docVectorNorms = Map[String, Double]()
+  }
   idx.getDocNamesInIndex().foreach{
      docId => 
      docVectorNorms += docId -> 0            
@@ -54,7 +50,6 @@ class TermBasedModel(idx : PersistentFreqIndex,
        docVectorNorms(docName) += (tfidf * tfidf)
      }
   }
-  
   docVectorNorms = docVectorNorms.map(norms => (norms._1, math.sqrt(norms._2)))
   
   override def getScores(queries: Map[String, List[String]], scoringOptions : ScoringModelOptions) : Map[String, Seq[(String, Double)]] =  {
@@ -139,6 +134,16 @@ class TermBasedModel(idx : PersistentFreqIndex,
   }
   
   def queryExpansion(origQueries : Map[String, List[String]], relevantDocs : Map[Int, List[String]], nDocsToAdd : Int) :  Map[String, List[String]] = {
+    var forwardIndex = Map[String, List[TermFreqPosting]]()
+    idx.index.foreach{
+      index => 
+       index._2.foreach{
+         freqPosting => 
+         val docName = idx.getDocName(freqPosting.id)
+         forwardIndex(docName) = forwardIndex.getOrElse(docName, List()) ++ List(TermFreqPosting(index._1, freqPosting.freq))
+       }
+    } 
+    println("forwardIndex created")
     origQueries.map(
       origQuery => (origQuery._1 -> (
         relevantDocs(origQuery._1.toInt).map(
@@ -168,7 +173,8 @@ object TermBasedModel {
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
     val relevance = RelevanceJudgementParse(relevancePath)
  
-    val termModel = new TermBasedModel(persistentIndex, docPath, options)
+    val useIndex = true
+    val termModel = new TermBasedModel(persistentIndex, docPath, options, useIndex)
      
     val nDocsToBeReturned = 100
     val scoringMethod = "TFIDF"

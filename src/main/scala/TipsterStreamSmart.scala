@@ -48,6 +48,19 @@ class TipsterStreamSmart(val path: String,
     println(s"completed in ${t.elapsed()} secs")
     df.toMap
   }
+  
+  def collectionFrequencies(): collection.mutable.Map[String, Int] = {
+    val t = Timer(500, heapInfo = true)
+    var cf = collection.mutable.Map[String, Int]()
+    for (doc <- this.stream) {
+      t.progress(s"$doc.id, ${doc.name}")
+      for(tf <- doc.termFrequencies) {
+        cf += tf._1 -> (cf.getOrElse(tf._1, 0) + tf._2)
+      }
+    }
+    println(s"completed in ${t.elapsed()} secs")
+    cf
+  }
 
 }
 

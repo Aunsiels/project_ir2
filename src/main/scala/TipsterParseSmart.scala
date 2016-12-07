@@ -44,6 +44,15 @@ class TipsterParseSmart(is: InputStream,
         })
       tf.toStream
   }
+  
+  def termFrequency(term: String) : Int = {
+     var tokens = TipsterParseSmart.tokenizer(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize)
+     tokens.filter(_.equals(term)).size
+  }
+  
+  def getDocumentLength: Int = {
+    tokens.length
+  }
 
   // remember hash codes
   TipsterParseSmart.nameHash += ID -> name
