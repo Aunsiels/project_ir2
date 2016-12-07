@@ -18,26 +18,8 @@ class TermBasedModel(idx : PersistentFreqIndex,
   var nDocs = 0
   var docMaxFrequency = Map[String, Double]()
   var docVectorNorms = Map[String, Double]()
-  
   nDocs = idx.getAmountOfDocsInIndex()
-  idx.getDocNamesInIndex().foreach{
-     docName => 
-     docMaxFrequency += docName -> 0.0           
-  }
-  idx.index.foreach{
-     index => 
-     index._2.foreach{
-       freqPosting => 
-       val docName = idx.getDocName(freqPosting.id)
-       if(freqPosting.freq > docMaxFrequency.getOrElse(docName, 0.0)) {
-         docMaxFrequency(docName) = freqPosting.freq
-       }
-     }
-  }
-  idx.getDocNamesInIndex().foreach{
-     docId => 
-     docVectorNorms += docId -> 0            
-  }
+  
   idx.index.foreach{
      index => 
      val df = index._2.size
@@ -47,7 +29,10 @@ class TermBasedModel(idx : PersistentFreqIndex,
        val tf = freqPosting.freq
        val tfidf = math.log(1 + tf) * idf
        val docName = idx.getDocName(freqPosting.id)
-       docVectorNorms(docName) += (tfidf * tfidf)
+       docVectorNorms += docName -> (docVectorNorms.getOrElse(docName,0.0) + (tfidf * tfidf))
+       if(freqPosting.freq > docMaxFrequency.getOrElse(docName, 0.0)) {
+         docMaxFrequency(docName) = freqPosting.freq
+       }
      }
   }
   docVectorNorms = docVectorNorms.map(norms => (norms._1, math.sqrt(norms._2)))
@@ -158,7 +143,7 @@ class TermBasedModel(idx : PersistentFreqIndex,
 object TermBasedModel {
   def main(args: Array[String]): Unit = {
      
-    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 0)
+    val options = TipsterOptions(maxDocs = 10000, chopping = -1, ngramSize = 0)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
@@ -177,8 +162,8 @@ object TermBasedModel {
     val termModel = new TermBasedModel(persistentIndex, docPath, options, useIndex)
      
     val nDocsToBeReturned = 100
-    val scoringMethod = "TFIDF"
-    //val scoringMethod = "COSINEDISTANCE"
+    //val scoringMethod = "TFIDF"
+    val scoringMethod = "COSINEDISTANCE"
     val scoringOptions = new ScoringModelOptions(
         nDocsToBeReturned = nDocsToBeReturned,
         scoringMethod = scoringMethod)

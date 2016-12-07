@@ -4,6 +4,8 @@ class LanguageModel(idx : PersistentFreqIndex,
                     path : String, 
                     options: TipsterOptions = TipsterOptions(),
                     useIndex: Boolean) extends ScoringModel {
+   
+  
   
   var documentLength = Map[String, Int]()
   var collectionFrequencies = Map[String, Int]()
@@ -32,61 +34,80 @@ class LanguageModel(idx : PersistentFreqIndex,
   
   override def computeScoreForQuery(query : List[String], scoringOptions : ScoringModelOptions) : Seq[(String, Double)] = {
     var scoreMap = Map[String, Double]()
-    
+    var result = Seq[(String, Double)]()
+     
+    //use index if useIndex == true and index available
+    if(useIndex && idx != null) {
+      query.foreach{
+        queryTerm => 
+          val idxList = tfIndex.getOrElse(queryTerm, List())
+          var cf = collectionFrequencies.getOrElse(queryTerm, 0)
+          if(idxList.nonEmpty) {
+            idxList.foreach{
+              index =>
+                val docName = idx.getDocName(index.id)
+                var Pwd = math.log(1.0 + 
+                      ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / documentLength.getOrElse(docName, 0).toDouble))
+                      / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments.toDouble)))
+                scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd) 
+            }
+          }
+        }
+      result = scoreMap.toSeq.sortWith(_._2 > _._2).take(100)
+    }
     //If we don't want to use index (use Index == false)
     //  or the index is not available
-    // => need to make iterate through tipster stream first
-    if(!(useIndex && idx != null)) {
+    // => need to iterate through tipster stream
+    else {
+      
       println("Analyzing query: " + query)
-      documentLength = Map[String, Int]()
+      
+      //we start doing a first iteration over all documents
+      //to get the collectionFrequencies and the total number
+      //of terms in all the document
+      //this information we need in the second round
+      //for the Jelinek-Mercer smoothing
+      val docs = new TipsterStreamSmart(path, options)
       collectionFrequencies = Map[String, Int]()
       nTermsInAllDocuments = 0.0
-      tfIndex = Map[String, List[FreqPosting]]()
-      val docs = new TipsterStreamSmart(path, options)
-      val t = Timer(500, heapInfo = true)
+      var t = Timer(500, heapInfo = true)
       for (doc <- docs.stream) {
-      /*docs.stream.foreach{
-        doc =>*/ 
         t.progress(s"${doc.ID}, ${doc.name}") 
         for (tf <- doc.termFrequencies) {
-          val queryTerm = tf._1
-          if(query.contains(queryTerm)) {
-            val freq = tf._2  
-            tfIndex += queryTerm -> (tfIndex.getOrElse(queryTerm, List()) ++ List(FreqPosting(doc.ID, freq)))
-          }
+          val term = tf._1
+          val freq = tf._2  
+          collectionFrequencies += term -> (collectionFrequencies.getOrElse(term, 0) + freq)
+          nTermsInAllDocuments += freq
         }
-        /*query.foreach{
-          queryTerm => 
-            var tf = doc.termFrequency(queryTerm)
-            if(tf > 0) {
-              tfIndex += queryTerm -> (tfIndex.getOrElse(queryTerm, List()) ++ List(FreqPosting(doc.ID, tf)))
-            }
-        }*/
-        documentLength += doc.name -> doc.getDocumentLength
       }
-      collectionFrequencies = tfIndex.map(termFPs => (termFPs._1, termFPs._2.map(fps => (fps.freq)).sum))
-      nTermsInAllDocuments = documentLength.map(docFreq => docFreq._2).sum 
-    }
-    
-    query.foreach{
-      queryTerm => 
-        val idxList = tfIndex.getOrElse(queryTerm, List())
-        var cf = collectionFrequencies.getOrElse(queryTerm, 0)
-        if(idxList.nonEmpty) {
-          idxList.foreach{
-            index =>
-              val docName = idx.getDocName(index.id)
-              var Pwd = math.log(1.0 + 
-                    ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / documentLength.getOrElse(docName, 0).toDouble))
-                    / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments.toDouble)))
-              scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd) 
+      
+      //in the secound iteration over all documents
+      //we compute the score for each document 
+      //and keep a list of the top-n ranked documents
+      t = Timer(500, heapInfo = true)
+      for (doc <- docs.stream) {
+        t.progress(s"${doc.ID}, ${doc.name}") 
+        val documentLength = doc.getDocumentLength
+        var docScore = 0.0
+        for (tf <- doc.termFrequencies.filter(tf => (query.contains(tf._1)))) {
+          val term = tf._1
+          val freq = tf._2
+          val cf = collectionFrequencies.getOrElse(term, 0)
+          var Pwd = math.log(1.0 + 
+                      ((1.0 - scoringOptions.lambda) * (freq.toDouble / documentLength.toDouble))
+                      / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments.toDouble)))
+          docScore += Pwd  
+        }
+        if(docScore > 0) {
+          result = result ++ Seq((doc.name, docScore)) 
+          if(result.size > scoringOptions.nDocsToBeReturned) {
+            result = result.sortWith(_._2 > _._2).take(scoringOptions.nDocsToBeReturned)
           }
         }
+      }
     }
-    val result = scoreMap.toSeq.sortWith(_._2 > _._2).take(100)
     result
-  }
-  
+  }   
 }
 
 object LanguageModel {
@@ -118,7 +139,7 @@ object LanguageModel {
         nDocsToBeReturned = nDocsToBeReturned)
     languageModel.computeScoreForQuery(sampleQuery, scoringOptions)
     
-    val scores = languageModel.getScores(queryParse.queries.slice(0, 4), scoringOptions)
+    val scores = languageModel.getScores(queryParse.queries, scoringOptions)
     
     languageModel.convertScoresToListOfDocNames(scores).foreach{
       tfIdfScore =>
