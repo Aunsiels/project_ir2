@@ -32,9 +32,8 @@ object Wordnet {
   private val dataPattern = """(\d+) \d+ [nvasr] (\d+) (\w+) \d+ ([\w\d ]*)\d+ [@;].*""".r
   private val wordPattern = """(\w+) \d+""".r
 
-
   def main(args: Array[String]): Unit = {
-    init()
+     init()
   }
 
   private var synonyms = collection.mutable.Map[String, Array[String]]()
@@ -55,6 +54,36 @@ object Wordnet {
 
     val computer = Synonym("computer").mkString("|")
     println(s"computer -> $computer")
-
+    
+    var term = "examination"
+    var synonym = Synonym(term).mkString("|")
+    println(s"$term -> $synonym")
+    
+    term = "president"
+    synonym = Synonym(term).mkString("|")
+    println(s"$term -> $synonym")
+    
+    term = "gas"
+    synonym = Synonym(term).mkString("|")
+    println(s"$term -> $synonym")
+    
+  }
+  
+  def expandTermBySynonyms(terms : String) : String = {
+    if(synonyms.size == 0) {
+      init()  
+    }
+    var termsExtended = ""
+    terms.split(" ").foreach{
+      term =>
+      val termLower = term.toLowerCase()
+      val synonyms = Synonym(term.toLowerCase()).mkString(" ")
+      termsExtended += term + " "
+      if(termLower != synonyms) 
+        termsExtended += synonyms + " "
+    }
+    //println("before: " + terms)
+    //println("after: " + termsExtended)
+    termsExtended
   }
 }

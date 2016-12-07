@@ -163,7 +163,8 @@ object TermBasedModel {
 
     val persistentIndex = new PersistentFreqIndex(docPath, dbPath, forceIndexRecreation, options)
    
-    val queryParse = QueryParse(queryPath, options)
+    var includeSynonymsInQuery = false
+    val queryParse = QueryParse(queryPath, options, includeSynonymsInQuery)
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
     val relevance = RelevanceJudgementParse(relevancePath)
  
@@ -171,6 +172,7 @@ object TermBasedModel {
      
     val nDocsToBeReturned = 100
     val scoringMethod = "TFIDF"
+    //val scoringMethod = "COSINEDISTANCE"
     val scoringOptions = new ScoringModelOptions(
         nDocsToBeReturned = nDocsToBeReturned,
         scoringMethod = scoringMethod)

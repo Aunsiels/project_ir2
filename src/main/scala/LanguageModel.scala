@@ -54,19 +54,22 @@ object LanguageModel {
     val queryPath = infiles.Queries
     val relevancePath = infiles.Relevance
     val forceIndexRecreation = false
-
+    
     val persistentIndex = new PersistentFreqIndex(docPath, dbPath, forceIndexRecreation, options)
    
-    val queryParse = QueryParse(queryPath, options)
+    var includeSynonymsInQuery = false
+    val queryParse = QueryParse(queryPath, options, includeSynonymsInQuery)
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
-    val relevance2 = RelevanceJudgementParse(relevancePath)
+    val relevance = RelevanceJudgementParse(relevancePath)
  
     val languageModel = new LanguageModel(persistentIndex, docPath, options)
     val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
     
     var lambda = 0.1
     var nDocsToBeReturned = 100
-    val scoringOptions = new ScoringModelOptions(lambda = lambda, nDocsToBeReturned = nDocsToBeReturned)
+    val scoringOptions = new ScoringModelOptions(
+        lambda = lambda, 
+        nDocsToBeReturned = nDocsToBeReturned)
     languageModel.computeScoreForQuery(sampleQuery, scoringOptions)
     
     val scores = languageModel.getScores(queryParse.queries, scoringOptions)
@@ -74,11 +77,11 @@ object LanguageModel {
     languageModel.convertScoresToListOfDocNames(scores).foreach{
       tfIdfScore =>
         println("Score for query: " + tfIdfScore._1)
-        val stat = Evaluation.getStat(tfIdfScore._2, relevance2.docs(tfIdfScore._1), 1)
+        val stat = Evaluation.getStat(tfIdfScore._2, relevance.docs(tfIdfScore._1), 1)
         println(stat)
     } 
     
-    val overallStats = Evaluation.getStat(languageModel.convertScoresToListOfDocNames(scores), relevance2.docs, 1.0)
+    val overallStats = Evaluation.getStat(languageModel.convertScoresToListOfDocNames(scores), relevance.docs, 1.0)
     println("Overall Stats for Language Model: ")
     println(overallStats)
         
