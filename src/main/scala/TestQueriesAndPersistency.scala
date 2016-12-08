@@ -18,14 +18,14 @@ object TestQueriesAndPersistency {
     db = factory.open(new File(fname), options)
   }
 
-  val patEntry = "\\((.+),(.+),(.+)\\)".r     //
+  val patEntry = "\\((.+),(.+),(.+)\\)".r
 
   def getDB(key: String, db: DB = db): List[FreqPosting] = {
     val v = asString(db.get(bytes(key)))
     if (v == null) List[FreqPosting]()
     else v.split(" ").map {
       //case patEntry(id, name, freq) => FreqPosting(id.toInt, name, freq.toInt)
-      case patEntry(id, freq) => FreqPosting(id.toInt, freq.toInt)
+      case patEntry(id, _, freq) => FreqPosting(id.toInt, freq.toInt)
     }.toList
   }
 
@@ -39,6 +39,7 @@ object TestQueriesAndPersistency {
     val relDocs = RelevanceJudgementParse(inf.Relevance)
 
     var orphanTokens = List[String]()
+    val wordnet = Wordnet()
 
     try {
       openDB(inf.Database)

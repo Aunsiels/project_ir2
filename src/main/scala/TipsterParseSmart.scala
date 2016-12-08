@@ -333,14 +333,14 @@ object TipsterParseSmart {
     * Tokenizes the given text.
     * @param text text string to be tokenized
     * @param numbers if true, remove all dates, numbers or phone numbers
-    * @param stops if true, remove all stop words
+    * @param stopWords if true, remove all stop words
     * @param stemming if true, perform stemming using PorterStemmer
     * @param chopping if > 0, truncate tokens to this max length
     * @return a List of tokens
     */
   def tokenize(text: String,
-                numbers: Boolean = true, stops: Boolean = true, stemming: Boolean = true, chopping: Int = -1, ngramSize: Int = 0): List[String] =
-    tokenizer(text, numbers, stops, stemming, chopping, ngramSize).toList
+                numbers: Boolean = true, stopWords: Boolean = true, stemming: Boolean = true, chopping: Int = -1, ngramSize: Int = 0): List[String] =
+    tokenizer(text, numbers, stopWords, stemming, chopping, ngramSize).toList
 
   def tokenize(text: String, options: TipsterOptions): List[String] =
     tokenizer(text, options.numbers, options.stopWords, options.stemming, options.chopping, options.ngramSize).toList
