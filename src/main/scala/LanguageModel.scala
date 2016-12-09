@@ -131,7 +131,7 @@ object LanguageModel {
  
     val useIndex = true
     val languageModel = new LanguageModel(persistentIndex, docPath, options, useIndex)
-    var lambda = 0.1
+    var lambda = 0.2
     var nDocsToBeReturned = 100
     val scoringOptions = new ScoringModelOptions(
         lambda = lambda, 
