@@ -49,10 +49,15 @@ class LanguageModel(idx : PersistentFreqIndex,
                   ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / documentLength.getOrElse(docName, 0).toDouble))
                     / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments)))
                 scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd) 
+                var Pwd = math.log(1.0 +
+                      ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / documentLength.getOrElse(docName, 0).toDouble))
+                      / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments.toDouble)))
+                scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd)
             }
           }
         }
-      result = scoreMap.toSeq.sortWith(_._2 > _._2).take(100)
+      //result = scoreMap.toSeq.sortWith(_._2 > _._2).take(scoringOptions.nDocsToBeReturned)
+      result = scoreMap.toSeq.sortWith { case((d1, s1), (d2, s2)) => if (s1 > s2) true else if (s1 == s2 && d1 < d2) true else false }.take(scoringOptions.nDocsToBeReturned)
     }
     //If we don't want to use index (use Index == false)
     //  or the index is not available
@@ -77,6 +82,7 @@ class LanguageModel(idx : PersistentFreqIndex,
           val freq = tf._2  
           collectionFrequencies += term -> (collectionFrequencies.getOrElse(term, 0) + freq)
           nTermsInAllDocuments += freq
+          documentLength += doc.name -> (documentLength.getOrElse(doc.name, 0) + freq)
         }
       }
       
@@ -86,21 +92,21 @@ class LanguageModel(idx : PersistentFreqIndex,
       t = Timer(500, heapInfo = true)
       for (doc <- docs.stream) {
         t.progress(s"${doc.ID}, ${doc.name}") 
-        val documentLength = doc.getDocumentLength
+        //val documentLength = doc.getDocumentLength
         var docScore = 0.0
         for (tf <- doc.termFrequencies.filter(tf => query.contains(tf._1))) {
           val term = tf._1
           val freq = tf._2
           val cf = collectionFrequencies.getOrElse(term, 0)
           var Pwd = math.log(1.0 + 
-                      ((1.0 - scoringOptions.lambda) * (freq.toDouble / documentLength.toDouble))
-                      / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments)))
-          docScore += Pwd  
+                      ((1.0 - scoringOptions.lambda) * (freq.toDouble / documentLength.getOrElse(doc.name, 0).toDouble))
+                      / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments.toDouble)))
+          docScore += Pwd
         }
         if(docScore > 0) {
           result = result ++ Seq((doc.name, docScore)) 
           if(result.size > scoringOptions.nDocsToBeReturned) {
-            result = result.sortWith(_._2 > _._2).take(scoringOptions.nDocsToBeReturned)
+            result = result.sortWith { case((d1, s1), (d2, s2)) => if (s1 > s2) true else if (s1 == s2 && d1 < d2) true else false }.take(scoringOptions.nDocsToBeReturned)
           }
         }
       }
@@ -113,6 +119,7 @@ object LanguageModel {
   def main(args: Array[String]): Unit = {
      
     val options = TipsterOptions(maxDocs = 10000, chopping = -1, useSynonyms = false)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
@@ -122,7 +129,8 @@ object LanguageModel {
     
     val persistentIndex = new PersistentFreqIndex(docPath, dbPath, forceIndexRecreation, options)
    
-    val queryParse = QueryParse(queryPath, options)
+    var includeSynonymsInQuery = false
+    val queryParse = QueryParse(queryPath, options, includeSynonymsInQuery)
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
     val relevance = RelevanceJudgementParse(relevancePath)
  
@@ -134,12 +142,22 @@ object LanguageModel {
     val nDocsToBeReturned = 100
     val scoringOptions = ScoringModelOptions(lambda = lambda, nDocsToBeReturned = nDocsToBeReturned)
     languageModel.computeScoreForQuery(sampleQuery, scoringOptions)
-    
+    var lambda = 0.2
+    var nDocsToBeReturned = 100
+    val scoringOptions = new ScoringModelOptions(
+        lambda = lambda,
+        nDocsToBeReturned = nDocsToBeReturned)
+
+    /*val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
+    languageModel.computeScoreForQuery(sampleQuery, scoringOptions)*/
+
     val scores = languageModel.getScores(queryParse.queries, scoringOptions)
     
     languageModel.convertScoresToListOfDocNames(scores).foreach{
       tfIdfScore =>
         println("Score for query: " + tfIdfScore._1)
+        println("relevant docs: " + relevance.docs(tfIdfScore._1))
+        println("proposed docs: " + tfIdfScore._2)
         val stat = Evaluation.getStat(tfIdfScore._2, relevance.docs(tfIdfScore._1), 1)
         println(stat)
     } 
