@@ -24,21 +24,20 @@ case class Wordnet (directory: String = "./wordnet/", types: List[String] = List
   private var synonymsStem = collection.mutable.Map[String, Array[String]]()
 
 
-  types.foreach(t => t match {
-    case "noun" | "verb" | "adj" => addSynonyms(directory + "data." + t)
-    case _ => println(s" $t not known")
-  })
+  types.foreach {
+    case t@("noun" | "verb" | "adj") => addSynonyms(directory + "data." + t)
+    case t => println(s" $t not known")
+  }
 
 
   private def addSynonyms(filename: String) = {
-    val synonyms = collection.mutable.Map[String, Array[String]]()
     Source.fromFile(filename).getLines().foreach {
       case Wordnet.dataPattern(offset, w_cnt, term, words) if w_cnt.toInt > 1 =>
         val syns = Wordnet.wordPattern.findAllMatchIn(words).map(_.group(1))
         val term2 = term.replace("_", " ")
         val synClean = syns.map(_.replace("_", " "))
         synonyms += term2 -> synClean.toArray
-        synonymsStem += PorterStemmer.stem(term2) -> synClean.map(PorterStemmer.stem(_)).toArray
+        synonymsStem += PorterStemmer.stem(term2) -> synClean.map(PorterStemmer.stem).toArray
       case Wordnet.dataPattern(offset, w_cnt, term, words) => // no synonyms
       case _ => // no synonyms
     }
@@ -51,9 +50,8 @@ case class Wordnet (directory: String = "./wordnet/", types: List[String] = List
   def expandBySynoyms(terms: String, stemming: Boolean = false): String = {
 
     val termList = TipsterParseSmart.tokenize(terms, numbers = false, stopWords = false, stemming = stemming)
-    var newterms = terms
-    termList.foreach(t => newterms += get(t, stemming))
-    termList.mkString(" ")
+    val additionalterms = termList.map(_.toLowerCase).flatMap(get(_, stemming))
+    terms ++ additionalterms.mkString(" ", " ", "")
   }
 }
 
@@ -64,6 +62,8 @@ object Wordnet {
 
   def main(args: Array[String]): Unit = {
     val wordnet = Wordnet()
+
+    println(s"wordnet size ${wordnet.synonyms.size}, ${wordnet.synonymsStem.size}")
 
     val computer = wordnet.get("computer").mkString("|")
     println(s"computer -> $computer")
@@ -80,6 +80,13 @@ object Wordnet {
     synonym = wordnet.get(term).mkString("|")
     println(s"$term -> $synonym")
 
+    val queries = List("'Downstream' Investments by OPEC Member States",
+      "Data on Proven Reserves of Oil & Natural Gas Producers",
+      "Measures to Protect the Atmosphere")
+    queries.foreach(q => {
+      println(s"${wordnet.expandBySynoyms(q)}")
+      println(s"${wordnet.expandBySynoyms(q, stemming = true)}")
+    })
   }
 
 

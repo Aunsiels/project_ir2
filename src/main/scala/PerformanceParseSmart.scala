@@ -71,7 +71,7 @@ object PerformanceParseSmart {
     var totTokens = 0
     var totTf = collection.mutable.Map[String, Int]()
 
-    val t = Timer(step = 1000, heapInfo = true)
+    val t = Timer(heapInfo = true)
     for (doc <- docs.stream.slice(0, maxDocs)) {
       t.progress(s"${doc.name}, ${doc.title}")
 

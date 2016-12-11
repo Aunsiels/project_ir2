@@ -2,8 +2,7 @@ import scala.collection.mutable.Map
 
 class LanguageModel(idx : PersistentFreqIndex, 
                     path : String, 
-                    options: TipsterOptions = TipsterOptions(),
-                    useIndex: Boolean) extends ScoringModel {
+                    options: TipsterOptions = TipsterOptions(), override val useIndex: Boolean) extends ScoringModel {
    
   
   
@@ -24,8 +23,8 @@ class LanguageModel(idx : PersistentFreqIndex,
         }
     }
     tfIndex = idx.index
-    collectionFrequencies = idx.index.map(termFPs => (termFPs._1, termFPs._2.map(fps => (fps.freq)).sum))
-    nTermsInAllDocuments = documentLength.map(docFreq => docFreq._2).sum
+    collectionFrequencies = idx.index.map(termFPs => (termFPs._1, termFPs._2.map(fps => fps.freq).sum))
+    nTermsInAllDocuments = documentLength.values.sum
   }
   
   override def getScores(queries: Map[String, List[String]], scoringOptions : ScoringModelOptions) : Map[String, Seq[(String, Double)]] =  {
@@ -41,14 +40,14 @@ class LanguageModel(idx : PersistentFreqIndex,
       query.foreach{
         queryTerm => 
           val idxList = tfIndex.getOrElse(queryTerm, List())
-          var cf = collectionFrequencies.getOrElse(queryTerm, 0)
+          val cf = collectionFrequencies.getOrElse(queryTerm, 0)
           if(idxList.nonEmpty) {
             idxList.foreach{
               index =>
                 val docName = idx.getDocName(index.id)
-                var Pwd = math.log(1.0 + 
-                      ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / documentLength.getOrElse(docName, 0).toDouble))
-                      / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments.toDouble)))
+                val Pwd = math.log(1.0 +
+                  ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / documentLength.getOrElse(docName, 0).toDouble))
+                    / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments)))
                 scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd) 
             }
           }
@@ -89,13 +88,13 @@ class LanguageModel(idx : PersistentFreqIndex,
         t.progress(s"${doc.ID}, ${doc.name}") 
         val documentLength = doc.getDocumentLength
         var docScore = 0.0
-        for (tf <- doc.termFrequencies.filter(tf => (query.contains(tf._1)))) {
+        for (tf <- doc.termFrequencies.filter(tf => query.contains(tf._1))) {
           val term = tf._1
           val freq = tf._2
           val cf = collectionFrequencies.getOrElse(term, 0)
           var Pwd = math.log(1.0 + 
                       ((1.0 - scoringOptions.lambda) * (freq.toDouble / documentLength.toDouble))
-                      / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments.toDouble)))
+                      / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments)))
           docScore += Pwd  
         }
         if(docScore > 0) {
@@ -113,7 +112,7 @@ class LanguageModel(idx : PersistentFreqIndex,
 object LanguageModel {
   def main(args: Array[String]): Unit = {
      
-    val options = TipsterOptions(maxDocs = 10000, chopping = -1)
+    val options = TipsterOptions(maxDocs = 10000, chopping = -1, useSynonyms = false)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
@@ -123,20 +122,17 @@ object LanguageModel {
     
     val persistentIndex = new PersistentFreqIndex(docPath, dbPath, forceIndexRecreation, options)
    
-    var includeSynonymsInQuery = false
-    val queryParse = QueryParse(queryPath, options, includeSynonymsInQuery)
+    val queryParse = QueryParse(queryPath, options)
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
     val relevance = RelevanceJudgementParse(relevancePath)
  
     val useIndex = false
     val languageModel = new LanguageModel(persistentIndex, docPath, options, useIndex)
     val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
-    
-    var lambda = 0.1
-    var nDocsToBeReturned = 100
-    val scoringOptions = new ScoringModelOptions(
-        lambda = lambda, 
-        nDocsToBeReturned = nDocsToBeReturned)
+
+    val lambda = 0.1
+    val nDocsToBeReturned = 100
+    val scoringOptions = ScoringModelOptions(lambda = lambda, nDocsToBeReturned = nDocsToBeReturned)
     languageModel.computeScoreForQuery(sampleQuery, scoringOptions)
     
     val scores = languageModel.getScores(queryParse.queries, scoringOptions)

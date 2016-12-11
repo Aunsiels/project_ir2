@@ -12,13 +12,9 @@ import scala.collection.mutable.Map
   * Read the query file and process all the queries
   * @param fname
   * @param options
-  * @param includeSynonymsInQuery if true, the query is expanded by the synonyms
-  * @param synonymStemming if true, and above is also true, then query is expanded by stemmed synonyms
   */
 case class QueryParse(fname: String, 
-              options: TipsterOptions = TipsterOptions(),
-              includeSynonymsInQuery: Boolean = false,
-              synonymStemming: Boolean = false) {
+              options: TipsterOptions = TipsterOptions()) {
 
   var queries = Map[String, List[String]]()
 
@@ -46,7 +42,7 @@ case class QueryParse(fname: String,
       case patNumber(num) => tempNum = num
       case patTitle(tit) => tempTit = tit
       case patDesc(d) =>
-        if(includeSynonymsInQuery) {
+        if(options.useSynonyms) {
           tempTit = wordnet.expandBySynoyms(tempTit)
         }
         queries += tempNum -> TipsterParseSmart.tokenize(tempTit, options)
@@ -62,7 +58,7 @@ object QueryParse {
   def main(args: Array[String]) {
 
     val queryFile = InputFiles(args).Queries
-    val queryParse = QueryParse(queryFile, includeSynonymsInQuery = true)
+    val queryParse = QueryParse(queryFile, options = TipsterOptions(useSynonyms = true))
 
     //val queryParse = new QueryParse_old(queryFile)
     println(s"${queryParse.queries.size}")

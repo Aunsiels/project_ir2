@@ -47,7 +47,7 @@ object TestQueriesAndPersistency {
         println(s"query ${q._1} ${q._2} ****")
         val tokenFreqs = q._2.map(x => {   // query tokens
           val entries = getDB(x)
-          if (entries.length == 0) orphanTokens = x :: orphanTokens
+          if (entries.isEmpty) orphanTokens = x :: orphanTokens
           entries.length
         })
         val tf = tokenFreqs.mkString(" ")

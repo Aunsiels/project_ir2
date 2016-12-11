@@ -72,7 +72,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
     val docs = new TipsterStreamSmart(path, options)
     val index = Map[String, ListBuffer[FreqPosting]]()
     println(s"*** ${index.getClass}")
-    val t = Timer(1000, heapInfo = true)
+    val t = Timer(heapInfo = true)
     for (doc <- docs.stream) {
       val id = doc.ID
       t.progress(s"$id, ${doc.name}")
@@ -116,10 +116,6 @@ class PersistentFreqIndex(path: String, dbPath: String,
   }
 
 
-  /**
-    * a pattern that matches the key-values stored in the database. See getDB how to use it.
-    */
-  val patEntry = "\\((.+),(.+),(.+)\\)".r
 
   /**
     * get the List[FreqPosting] from the database of the given key which is a term
@@ -131,7 +127,8 @@ class PersistentFreqIndex(path: String, dbPath: String,
     val v = asString(db.get(bytes(key)))
     if (v == null) List[FreqPosting]()
     else v.split(" ").map {
-      case patEntry(id, name, freq) => FreqPosting(id.toInt, freq.toInt)
+      case PersistentFreqIndex.patEntry2(id, freq) => FreqPosting(id.toInt, freq.toInt)
+      case PersistentFreqIndex.patEntry3(id, name, freq) => FreqPosting(id.toInt, freq.toInt)
     }.toList
   }
 
@@ -146,26 +143,41 @@ class PersistentFreqIndex(path: String, dbPath: String,
     val iterator = db.iterator()
     try {
       iterator.seekToFirst()
+      val t = Timer(step = 5000, heapInfo = true)
+
       while (iterator.hasNext()) {
         val key = asString(iterator.peekNext().getKey())
+        t.progress(s"$key")
         if(key == "ID_Hash") {
           val value = asString(iterator.peekNext().getValue())
           val idHashStringList = value.split(",")
-          idHashStringList.foreach{
+          idHashStringList.foreach {
             idHash =>
-              var idHashArray = idHash.split(" -> ")
-              var id = idHashArray(0)
-              var hash = idHashArray(1)
+              val idHashArray = idHash.split(" -> ")
+              val id = idHashArray(0)
+              val hash = idHashArray(1)
               docHashMap += id.toInt -> hash
           }
         } else {
           val value = asString(iterator.peekNext().getValue())
           val postingStringList = value.split(" ")
+          /*
           val postings = postingStringList.map(
             psl => FreqPosting(
               psl.substring(1, psl.length - 1).split(",")(0).toInt,
               psl.substring(1, psl.length - 1).split(",")(1).toInt)).toList
-          index += key -> postings        
+              */
+          /**
+            * take care of older version with 3 entries and new version that does not have the name
+            */
+          val postings = postingStringList.map {
+            case PersistentFreqIndex.patEntry3(id, name, freq) =>
+              docHashMap += id.toInt -> name
+              FreqPosting(id.toInt, freq.toInt)
+            case PersistentFreqIndex.patEntry2(id, freq) =>
+              FreqPosting(id.toInt, freq.toInt)
+          }.toList
+          index += key -> postings
         }
         iterator.next()
       }
@@ -191,7 +203,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
   }
 
   def getDocNamesInIndex(): Set[String] = {
-    this.docHashMap.map(idName => idName._2).toSet
+    this.docHashMap.values.toSet
   }
   
   def getDocName(id: Int): String = {
@@ -203,7 +215,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
 object PersistentFreqIndex {
   def main(args: Array[String]): Unit = {
 
-    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 0)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
@@ -211,6 +223,13 @@ object PersistentFreqIndex {
 
     val persistentIndex = new PersistentFreqIndex(docPath, dbPath, forceIndexRecreation, options)
   }
+
+  /**
+    * a pattern that matches the key-values stored in the database. See getDB how to use it.
+    */
+  val patEntry2 = "\\((.+),(.+)\\)".r
+  val patEntry3 = "\\((.+),(.+),(.+)\\)".r
+
 
 
 }

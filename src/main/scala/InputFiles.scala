@@ -19,17 +19,17 @@
   * @param documents directory with the documents. If not given, take default of this user
   * @param database database file. If not given, take default of this user
   */
-case class InputFiles(args: Array[String] = Array(), documents: String = "", database: String = "") {
+case class InputFiles(args: Array[String] = Array(), documents: String = "", database: String = "",
+                      queries: String = "", relevance: String = "") {
 
   private val user = System.getProperty("user.name")
 
   def Docs(key: String): String = InputFiles.defaultFiles.getOrElse(user, InputFiles.defaultFiles("default"))(key)
 
-  val DocPath = if (args.length >= 1) args(0) else Docs("documents")
-  val Database = if (args.length >= 2) args(1) else Docs("database")
-  val Queries = if (args.length >= 3) args(1) else Docs("queries")
-  val Relevance = if (args.length >= 4) args(1) else Docs("relevance")
-
+  val DocPath = if (args.length >= 1) args(0) else if (documents != "") documents else Docs("documents")
+  val Database = if (args.length >= 2) args(1) else if (database != "") database else Docs("database")
+  val Queries = if (args.length >= 3) args(2) else if (queries != "") queries else Docs("queries")
+  val Relevance = if (args.length >= 4) args(3) else if (relevance != "") relevance else Docs("relevance")
 }
 
 object InputFiles {

@@ -46,8 +46,8 @@ class TipsterParseSmart(is: InputStream,
   }
   
   def termFrequency(term: String) : Int = {
-     var tokens = TipsterParseSmart.tokenizer(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize)
-     tokens.filter(_.equals(term)).size
+    val tokens = TipsterParseSmart.tokenizer(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize)
+     tokens.count(_.equals(term))
   }
   
   def getDocumentLength: Int = {
@@ -81,7 +81,7 @@ class TipsterParseSmart(is: InputStream,
 
 object TipsterParseSmart {
 
-  var TitleCutoff = 100
+  val TitleCutoff = 100
 
   val nameHash = collection.mutable.Map[Int, String]()
 
@@ -316,7 +316,7 @@ object TipsterParseSmart {
   }
       
   private def testTokenize(text: String, numbers: Boolean, stops: Boolean, stemming: Boolean, chopping: Int): Array[String] = {
-    val a = text.split("[ .,;:?!*&$-+\\s]+").filter(_.length >= 3)
+    val a = text.split("""[ .,;:?!*&$_\-+\s]+""").filter(_.length >= 3)
     val b = a.map(x => trim(x.toLowerCase))
     val c = b.filter(_.length > 0)
     val d = c.filterNot(numbers && numberMap(_).startsWith("<"))

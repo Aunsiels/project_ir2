@@ -22,11 +22,11 @@ object Evaluation {
 
     def getStat[A] (retriev : List[A], relev : List[A], beta : Double) : Stat = {
         val truePos = (relev.toSet & retriev.toSet).size.toDouble
-        val precision = if (retriev.size > 0) truePos / retriev.size else 0.0
+        val precision = if (retriev.nonEmpty) truePos / retriev.size else 0.0
         //need to bound amount of relevant docs to 100 
         //because we only return top 100
         val nRelevant = math.min(relev.size, 100)
-        val recall = if (relev.size > 0) truePos / nRelevant else 0.0
+        val recall = if (relev.nonEmpty) truePos / nRelevant else 0.0
         val ap = avaragePrecision(retriev, relev)
         var f1 = 0.0
         if (truePos != 0)
@@ -40,7 +40,7 @@ object Evaluation {
           retriev =>
             sumStats = sumStats.add(getStat(retriev._2, relevs.getOrElse(retriev._1, List()), beta))
         }
-        var size = retrievs.size.toDouble
+      val size = retrievs.size.toDouble
         Stat(sumStats.precision / size, sumStats.recall / size, sumStats.f1 / size, sumStats.ap / size)
     }
     
@@ -57,7 +57,7 @@ object Evaluation {
           val relK = if(relev.contains(retr)) 1.0 else 0.0
           sum += (Pk * relK)
       }
-      var avaragePrecision = (sum / nRelevant)
+      val avaragePrecision = (sum / nRelevant)
       avaragePrecision
     }
     
@@ -76,7 +76,6 @@ object Evaluation {
       val retrievs = Map((1 -> retriev1), (2 -> retriev2))
       val relevs = Map((1 -> relev1), (2 -> relev2))
       println(getStat(retrievs, relevs, 1.0))
-      
-      return   
+
     }
 }
