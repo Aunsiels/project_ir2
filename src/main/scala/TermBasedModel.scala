@@ -158,13 +158,7 @@ class TermBasedModel(idx : PersistentFreqIndex,
     result
   }
   
-  def computeTfIdfScoresForQuery(query : List[String], nDocsToReturn : Int) : Seq[(String, Double)] = {
-    //println("computing score for query terms: " + query)
-    
-    if(idx.index.isEmpty) {
-      //TODO: need to run the scoring directly on the stream
-    }
-    
+
   def computeTfIdfScoresForQuery(query : List[String], scoringOptions : ScoringModelOptions) : Seq[(String, Double)] = {
     var scoreMap = Map[String, Double]()
     var result = Seq[(String, Double)]()

@@ -49,10 +49,6 @@ class LanguageModel(idx : PersistentFreqIndex,
                   ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / documentLength.getOrElse(docName, 0).toDouble))
                     / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments)))
                 scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd) 
-                var Pwd = math.log(1.0 +
-                      ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / documentLength.getOrElse(docName, 0).toDouble))
-                      / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments.toDouble)))
-                scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd)
             }
           }
         }
@@ -119,18 +115,18 @@ object LanguageModel {
   def main(args: Array[String]): Unit = {
      
     val options = TipsterOptions(maxDocs = 10000, chopping = -1, useSynonyms = false)
-    val options = TipsterOptions(maxDocs = 100000, chopping = -1)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
     val queryPath = infiles.Queries
     val relevancePath = infiles.Relevance
     val forceIndexRecreation = false
+    val lambda = 0.1
     
     val persistentIndex = new PersistentFreqIndex(docPath, dbPath, forceIndexRecreation, options)
    
     var includeSynonymsInQuery = false
-    val queryParse = QueryParse(queryPath, options, includeSynonymsInQuery)
+    val queryParse = QueryParse(queryPath, options)
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
     val relevance = RelevanceJudgementParse(relevancePath)
  
@@ -138,18 +134,9 @@ object LanguageModel {
     val languageModel = new LanguageModel(persistentIndex, docPath, options, useIndex)
     val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
 
-    val lambda = 0.1
-    val nDocsToBeReturned = 100
-    val scoringOptions = ScoringModelOptions(lambda = lambda, nDocsToBeReturned = nDocsToBeReturned)
+    val scoringOptions = ScoringModelOptions(lambda = 0.1, nDocsToBeReturned = 100)
     languageModel.computeScoreForQuery(sampleQuery, scoringOptions)
-    var lambda = 0.2
-    var nDocsToBeReturned = 100
-    val scoringOptions = new ScoringModelOptions(
-        lambda = lambda,
-        nDocsToBeReturned = nDocsToBeReturned)
 
-    /*val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
-    languageModel.computeScoreForQuery(sampleQuery, scoringOptions)*/
 
     val scores = languageModel.getScores(queryParse.queries, scoringOptions)
     
