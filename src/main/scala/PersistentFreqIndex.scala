@@ -215,7 +215,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
 object PersistentFreqIndex {
   def main(args: Array[String]): Unit = {
 
-    val options = TipsterOptions(maxDocs = 100000, chopping = -1)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1, splitLong = true)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database

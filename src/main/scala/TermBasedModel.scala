@@ -275,7 +275,7 @@ class TermBasedModel(idx : PersistentFreqIndex,
 object TermBasedModel {
   def main(args: Array[String]): Unit = {
      
-    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 0, useSynonyms = true, splitLong = true)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 0, useSynonyms = false, splitLong = true)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database

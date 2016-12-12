@@ -42,8 +42,12 @@ class TipsterParseSmart(is: InputStream,
     val tf = collection.mutable.Map[String, Int]()
     TipsterParseSmart.tokenizer(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize, splitLong)
       .foreach(t => {
-        tf += t -> (1 + tf.getOrElse(t, 1))
+        tf += t -> (1 + tf.getOrElse(t, 0))
       })
+     TipsterParseSmart.tokenizer(title, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize, splitLong)
+      .foreach(t => {
+        tf += t -> (5 + tf.getOrElse(t, 0))
+      })  
     tf.toStream
   }
 
