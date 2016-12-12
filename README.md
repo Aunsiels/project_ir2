@@ -13,7 +13,7 @@ Provided is the zip file `ir-practical-2016-2-11.zip`. Unzip it:
 This creates:
 - this `README.md` file
 - the directory `sources` which contains `build.sbt` and `src`
-- teh result filea `ranking-t-11.run` and `ranking-n-11.run`
+- teh result files `ranking-t-11.run` and `ranking-n-11.run`
 
 ## Running
 To run:

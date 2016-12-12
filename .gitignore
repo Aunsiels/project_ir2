@@ -37,5 +37,5 @@ project/plugins/project/
 data/
 indexDatabase*
 database*/
-
+.idea_maven/
 *.sst

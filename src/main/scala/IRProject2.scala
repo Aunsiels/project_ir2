@@ -25,41 +25,52 @@ object IRProject2 {
   var relevanceFile = ""
 
 
+  /**
+    * if arguments are given on the command line, take those.
+    * If not, and it is one of the developers, take the info from InputFiles
+    * @param args
+    * @return
+    */
   def parseArguments(args: Array[String]): InputFiles = {
-    val patData = """da.*\s*=\s*([\w/\\\.\-]+)""".r
-    val patQuery = """q.*\s*=\s*([\w/\\\.\-]+)""".r
-    val patDB = """db.*\s*=\s*([\w/\\\.\-]+)""".r
-    val patRel = """r.*\s*=\s*([\w/\\\.\-]+)""".r
-    args.foreach {
-      case patData(dir) => dataDir = dir
-      case patQuery(file) => queryFile = file
-      case patDB(x) => databaseFile = x
-      case patRel(x) => relevanceFile = x
-      case a => println("unknown option " + a)
+
+    if (args.length == 0 && InputFiles.isDeveloper)
+      InputFiles()
+    else {
+      val patData = """da.*\s*=\s*([\w/\\\.\-]+)""".r
+      val patQuery = """q.*\s*=\s*([\w/\\\.\-]+)""".r
+      val patDB = """db.*\s*=\s*([\w/\\\.\-]+)""".r
+      val patRel = """r.*\s*=\s*([\w/\\\.\-]+)""".r
+      args.foreach {
+        case patData(dir) => dataDir = dir
+        case patQuery(file) => queryFile = file
+        case patDB(x) => databaseFile = x
+        case patRel(x) => relevanceFile = x
+        case a => println("unknown option " + a)
+      }
+      InputFiles(documents = dataDir, database = databaseFile, queries = queryFile, relevance = relevanceFile)
     }
-    InputFiles(documents = dataDir, database = databaseFile, queries = queryFile, relevance = relevanceFile)
   }
 
 
   def main(args: Array[String]): Unit = {
-    if (args.length < 1) {
+    if (args.length < 1 && !InputFiles.isDeveloper) {
       help
       return
     }
     val input = parseArguments(args)
 
-    println("*** building index")
+    println(s"*** building index from ${input.DocPath} into database ${input.Database}")
     val options = TipsterOptions(chopping = -1, useSynonyms = true /*, maxDocs = 20000*/)
     val forceIndexRecreation = false
 
     val index = new PersistentFreqIndex(input.DocPath, input.Database, forceIndexRecreation, options)
 
 
-    println("*** relevance documents")
+    println(s"*** relevance documents ${input.Relevance}")
     val relevance = RelevanceJudgementParse(input.Relevance)
 
 
-    println("*** reading queries")
+    println(s"*** reading queries ${input.Queries}")
     val q: String = input.Queries
     // no clue why we need this
     val queries = QueryParse(q, options)
