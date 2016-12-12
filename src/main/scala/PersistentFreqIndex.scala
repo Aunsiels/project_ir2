@@ -135,7 +135,7 @@ class PersistentFreqIndex(path: String, dbPath: String,
 
 
   def recreateIndexFromDisk(): Map[String, List[FreqPosting]] = {
-    println("recreating inverted index from db started")
+    println(s"recreating inverted index from db $dbPath started")
     val index = Map[String, List[FreqPosting]]()
     val options = new Options()
     options.createIfMissing(true)

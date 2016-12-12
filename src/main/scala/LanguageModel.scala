@@ -5,7 +5,7 @@ class LanguageModel(idx : PersistentFreqIndex,
                     options: TipsterOptions = TipsterOptions(), override val useIndex: Boolean) extends ScoringModel {
    
   
-  
+   
   var documentLength = Map[String, Int]()
   var collectionFrequencies = Map[String, Int]()
   var nTermsInAllDocuments = 0.0
@@ -46,9 +46,9 @@ class LanguageModel(idx : PersistentFreqIndex,
               index =>
                 val docName = idx.getDocName(index.id)
                 val Pwd = math.log(1.0 +
-                  ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / documentLength.getOrElse(docName, 0).toDouble))
+                      ((1.0 - scoringOptions.lambda) * (index.freq.toDouble / documentLength.getOrElse(docName, 0).toDouble))
                     / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments)))
-                scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd) 
+                scoreMap += docName -> (scoreMap.getOrElse(docName, 0.0) + Pwd)
             }
           }
         }
@@ -106,6 +106,7 @@ class LanguageModel(idx : PersistentFreqIndex,
           }
         }
       }
+      result = result.sortWith { case((d1, s1), (d2, s2)) => if (s1 > s2) true else if (s1 == s2 && d1 < d2) true else false }.take(scoringOptions.nDocsToBeReturned)
     }
     result
   }   
@@ -114,32 +115,36 @@ class LanguageModel(idx : PersistentFreqIndex,
 object LanguageModel {
   def main(args: Array[String]): Unit = {
      
-    val options = TipsterOptions(maxDocs = 10000, chopping = -1, useSynonyms = false)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1, useSynonyms = true)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
     val queryPath = infiles.Queries
     val relevancePath = infiles.Relevance
     val forceIndexRecreation = false
-    val lambda = 0.1
     
     val persistentIndex = new PersistentFreqIndex(docPath, dbPath, forceIndexRecreation, options)
-   
-    var includeSynonymsInQuery = false
+
     val queryParse = QueryParse(queryPath, options)
+    println(s"${queryParse.queries.size} queries from $queryPath")
+
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
     val relevance = RelevanceJudgementParse(relevancePath)
+    println(s"${relevance.docs.size} documents to test relevande from $relevancePath")
  
-    val useIndex = false
+    val useIndex = true
     val languageModel = new LanguageModel(persistentIndex, docPath, options, useIndex)
-    val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
-
-    val scoringOptions = ScoringModelOptions(lambda = 0.1, nDocsToBeReturned = 100)
-    languageModel.computeScoreForQuery(sampleQuery, scoringOptions)
-
-
-    val scores = languageModel.getScores(queryParse.queries, scoringOptions)
+    var lambda = 0.2
+    var nDocsToBeReturned = 100
+    val scoringOptions = ScoringModelOptions(
+        lambda = lambda, 
+        nDocsToBeReturned = nDocsToBeReturned)
     
+    /*val sampleQuery = TipsterParseSmart.tokenize("aircraft dead whereabout adasdsdfasd", options)
+    languageModel.computeScoreForQuery(sampleQuery, scoringOptions)*/
+    
+    val scores = languageModel.getScores(queryParse.queries, scoringOptions)
+    println(scores)
     languageModel.convertScoresToListOfDocNames(scores).foreach{
       tfIdfScore =>
         println("Score for query: " + tfIdfScore._1)

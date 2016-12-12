@@ -10,15 +10,17 @@ import scala.collection.mutable.Map
 
 /**
   * Read the query file and process all the queries
+  *
   * @param fname
   * @param options
   */
-case class QueryParse(fname: String, 
-              options: TipsterOptions = TipsterOptions()) {
+case class QueryParse(fname: String,
+                      options: TipsterOptions = TipsterOptions()) {
 
   var queries = Map[String, List[String]]()
 
   /* Parse entries that look like this. Note that title can extend lines until the next <desc>
+
   <num> Number: 090
 
   <dom> Domain: International Economics
@@ -37,15 +39,23 @@ case class QueryParse(fname: String,
 
   val wordnet = Wordnet()
 
+  def insertQuery(num: String, title: String) = {
+    val tit = if (options.useSynonyms) wordnet.expandBySynoyms(title) else title
+    queries += num -> TipsterParseSmart.tokenize(tit, options)
+  }
+
   Source.fromFile(fname).getLines()
     .foreach {
       case patNumber(num) => tempNum = num
-      case patTitle(tit) => tempTit = tit
-      case patDesc(d) =>
-        if(options.useSynonyms) {
-          tempTit = wordnet.expandBySynoyms(tempTit)
+      case patTitle(tit) =>
+        tempTit = tit
+        // very terrible hack, but need to do it.
+        if (fname contains "test-questions.txt") {
+          insertQuery(tempNum, tempTit)
+          tempTit = ""
         }
-        queries += tempNum -> TipsterParseSmart.tokenize(tempTit, options)
+      case patDesc(d) =>
+        insertQuery(tempNum, tempTit)
         tempTit = ""
       case patCont(x) => if (!tempTit.isEmpty) tempTit ++= " " + x
       case _ =>

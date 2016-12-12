@@ -40,19 +40,22 @@ object InputFiles {
   val defaultFiles = Map(
     "Michael" ->
       Map("database" -> "",
-        "documents" -> merkiDir + "/documents/",
+        "documents" -> "C:/Users/Michael/Desktop/IR Data/Project 2/documents/",
         "database" -> "C:/Users/Michael/Desktop/FreqIndexDatabase/",
-        "queries" -> merkiDir + "/test-questions.txt",
-        "relevance" -> merkiDir + "/relevance-judgements.csv"),
+        "queries" -> "C:/Users/Michael/Desktop/IR Data/Project 2/test-questions.txt",
+        "relevance" -> "C:/Users/Michael/Desktop/IR Data/Project 2/relevance-judgements.csv"),
     "mmgreiner" ->
-      Map("database" -> greinerDir + "./databases/FreqIndexDatabase_100000",
-        "documents" -> greinerDir + "./data/documents/",
-        "queries" -> greinerDir + "./data/test-questions.txt",
-        "relevance" -> greinerDir + "./data/relevance-judgements.csv"),
+      Map("database" -> "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/databases/FreqIndexDatabase_100000",
+        "documents" -> "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/data/documents/",
+        "queries" -> "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/data/test-questions.txt",
+        "relevance" -> "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/data/relevance-judgements.csv"),
     "julien" ->
       Map("database" -> "", "documents" -> "./data/documents/"),
     "default" ->
-      Map("documents" -> "./data/documents/", "database" -> "./database/")
+      Map("documents" -> "./data/documents/",
+        "database" -> "./database/",
+        "queries" -> "./data/test-questions.txt",
+        "relevance" -> "./data/relevance-judgement.csv")
   )
 
   val isDeveloper = defaultFiles.keys.toList contains user

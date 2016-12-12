@@ -86,7 +86,7 @@ object TipsterParseSmart {
   val nameHash = collection.mutable.Map[Int, String]()
 
   // regular expressions defined statically
-  val Split = """[ .,;:?!*&$\-+\s\(\)\[\]]+"""
+  val Split = """[ .,;:?!*&$\-+\s\(\)\[\]\{\}_]+"""
   val rDate = "^\\d+[/-]\\d+[/-]\\d+$".r -> "<DATE>"
   val rUSPhone = "^\\d{3}\\W\\d+{3}\\W\\d{4}$".r -> "<USPHONE>"
   val rNumber = "^[-]?\\d+([.,]\\d+)*$|^(one|two|three|four)$".r -> "<NUMBER>"
@@ -316,7 +316,7 @@ object TipsterParseSmart {
   }
       
   private def testTokenize(text: String, numbers: Boolean, stops: Boolean, stemming: Boolean, chopping: Int): Array[String] = {
-    val a = text.split("""[ .,;:?!*&$_\-+\s]+""").filter(_.length >= 3)
+    val a = text.split(Split).filter(_.length >= 3)
     val b = a.map(x => trim(x.toLowerCase))
     val c = b.filter(_.length > 0)
     val d = c.filterNot(numbers && numberMap(_).startsWith("<"))

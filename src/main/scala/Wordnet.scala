@@ -31,6 +31,7 @@ case class Wordnet (directory: String = "./wordnet/", types: List[String] = List
 
 
   private def addSynonyms(filename: String) = {
+    println(s"reading wordnet synonyms $filename")
     Source.fromFile(filename).getLines().foreach {
       case Wordnet.dataPattern(offset, w_cnt, term, words) if w_cnt.toInt > 1 =>
         val syns = Wordnet.wordPattern.findAllMatchIn(words).map(_.group(1))
