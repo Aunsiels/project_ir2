@@ -24,6 +24,7 @@ object IRProject2 {
   var databaseFile = ""
   var relevanceFile = ""
 
+
   def parseArguments(args: Array[String]): InputFiles = {
     val patData = """da.*\s*=\s*([\w/\\\.\-]+)""".r
     val patQuery = """q.*\s*=\s*([\w/\\\.\-]+)""".r
@@ -118,7 +119,7 @@ object IRProject2 {
     val pw = new PrintWriter(new FileOutputStream(fname, false))
     scores.foreach(q => {
       q._2.zipWithIndex.foreach(d =>
-        pw.println(s"${q._1} ${d._2} ${d._1}")
+        pw.println(s"${q._1} ${d._2} ${d._1._1}")
       )
     })
     pw.close()
