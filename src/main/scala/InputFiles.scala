@@ -42,7 +42,8 @@ object InputFiles {
       Map("database" -> "",
         "documents" -> "C:/Users/Michael/Desktop/IR Data/Project 2/documents/",
         "database" -> "C:/Users/Michael/Desktop/FreqIndexDatabase/",
-        "queries" -> "C:/Users/Michael/Desktop/IR Data/Project 2/test-questions.txt",
+        //"queries" -> "C:/Users/Michael/Desktop/IR Data/Project 2/test-questions.txt",
+        "queries" -> "C:/Users/Michael/Desktop/IR Data/Project 2/questions-descriptions.txt",
         "relevance" -> "C:/Users/Michael/Desktop/IR Data/Project 2/relevance-judgements.csv"),
     "mmgreiner" ->
       Map("database" -> "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/databases/FreqIndexDatabase_100000",

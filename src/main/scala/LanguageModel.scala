@@ -34,6 +34,10 @@ class LanguageModel(idx : PersistentFreqIndex,
   override def computeScoreForQuery(query : List[String], scoringOptions : ScoringModelOptions) : Seq[(String, Double)] = {
     var scoreMap = Map[String, Double]()
     var result = Seq[(String, Double)]()
+    val queryTermFrequency = collection.mutable.Map[String, Int]()
+    query.foreach(t => {
+      queryTermFrequency += t -> (1 + queryTermFrequency.getOrElse(t, 0))
+    })
      
     //use index if useIndex == true and index available
     if(useIndex && idx != null) {
@@ -97,7 +101,7 @@ class LanguageModel(idx : PersistentFreqIndex,
           var Pwd = math.log(1.0 + 
                       ((1.0 - scoringOptions.lambda) * (freq.toDouble / documentLength.getOrElse(doc.name, 0).toDouble))
                       / (scoringOptions.lambda * (cf.toDouble / nTermsInAllDocuments.toDouble)))
-          docScore += Pwd
+          docScore += (Pwd * queryTermFrequency.getOrElse(term, 0).toDouble)
         }
         if(docScore > 0) {
           result = result ++ Seq((doc.name, docScore)) 
@@ -153,7 +157,6 @@ object LanguageModel {
         val stat = Evaluation.getStat(tfIdfScore._2, relevance.docs(tfIdfScore._1), 1)
         println(stat)
     } 
-    
     val overallStats = Evaluation.getStat(languageModel.convertScoresToListOfDocNames(scores), relevance.docs, 1.0)
     println("Overall Stats for Language Model: ")
     println(overallStats)

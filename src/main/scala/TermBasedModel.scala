@@ -58,7 +58,7 @@ class TermBasedModel(idx : PersistentFreqIndex,
   def computeCosineSimilarityForQuery(query : List[String], scoringOptions : ScoringModelOptions) : Seq[(String, Double)] = {
     val queryTermFrequency = collection.mutable.Map[String, Int]()
     query.foreach(t => {
-      queryTermFrequency += t -> (1 + queryTermFrequency.getOrElse(t, 1))
+      queryTermFrequency += t -> (1 + queryTermFrequency.getOrElse(t, 0))
     })
     var scoreMap = Map[String, Double]()
     var result = Seq[(String, Double)]()
@@ -161,9 +161,15 @@ class TermBasedModel(idx : PersistentFreqIndex,
   def computeTfIdfScoresForQuery(query : List[String], scoringOptions : ScoringModelOptions) : Seq[(String, Double)] = {    
     var scoreMap = Map[String, Double]()
     var result = Seq[(String, Double)]()
+    val queryTermFrequency = collection.mutable.Map[String, Int]()
+    query.foreach(t => {
+      queryTermFrequency += t -> (1 + queryTermFrequency.getOrElse(t, 0))
+    })
+    println(queryTermFrequency)
     
     //use index if useIndex == true and index available
     if(useIndex && idx != null) {
+      println("Analyzing query: " + query)
       query.foreach{
         queryTerm => 
           val idxList = idx.index.getOrElse(queryTerm, List()) 
@@ -231,7 +237,7 @@ class TermBasedModel(idx : PersistentFreqIndex,
           val idf = math.log(nDocs.toDouble / df.toDouble)
           val augmentedTf = (0.5 + (0.5 * (freq.toDouble / maxTermFreqency.toDouble)))
           val tfidf = augmentedTf * idf
-          docScore += tfidf
+          docScore += (tfidf * queryTermFrequency.getOrElse(term, 0).toDouble)
         }
         if(docScore > 0.0) {
           result = result ++ Seq((doc.name, docScore)) 
@@ -289,8 +295,8 @@ object TermBasedModel {
     val termModel = new TermBasedModel(persistentIndex, docPath, options, useIndex)
      
     val nDocsToBeReturned = 100
-    //val scoringMethod = "TFIDF"
-    val scoringMethod = "COSINESIMILARITY"
+    val scoringMethod = "TFIDF"
+    //val scoringMethod = "COSINESIMILARITY"
     val scoringOptions = ScoringModelOptions(
         nDocsToBeReturned = nDocsToBeReturned,
         scoringMethod = scoringMethod)
