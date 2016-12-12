@@ -165,7 +165,6 @@ class TermBasedModel(idx : PersistentFreqIndex,
     query.foreach(t => {
       queryTermFrequency += t -> (1 + queryTermFrequency.getOrElse(t, 0))
     })
-    println(queryTermFrequency)
     
     //use index if useIndex == true and index available
     if(useIndex && idx != null) {
@@ -184,7 +183,7 @@ class TermBasedModel(idx : PersistentFreqIndex,
                 val augmentedTf = (0.5 + (0.5 * (tf.toDouble / docMaxFrequency(docName))))
                 val tfidf = augmentedTf * idf
                 
-                /*val tfNorm = (tf / docMaxFrequency(docName))
+                /*val tfNorm = (tf.toDouble / docMaxFrequency(docName).toDouble)
                 val tfidf = math.log(1 + tfNorm) * idf*/
                 
                 //val tfidf = math.log(1 + tf) * idf
@@ -261,8 +260,7 @@ class TermBasedModel(idx : PersistentFreqIndex,
          val docName = idx.getDocName(freqPosting.id)
          forwardIndex(docName) = forwardIndex.getOrElse(docName, List()) ++ List(TermFreqPosting(index._1, freqPosting.freq))
        }
-    } 
-    println("forwardIndex created")
+    }
     origQueries.map(
       origQuery => (origQuery._1 -> (
         relevantDocs(origQuery._1.toInt).map(
@@ -277,7 +275,7 @@ class TermBasedModel(idx : PersistentFreqIndex,
 object TermBasedModel {
   def main(args: Array[String]): Unit = {
      
-    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 0, useSynonyms = true)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 0, useSynonyms = false)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database

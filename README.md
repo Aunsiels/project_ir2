@@ -1,6 +1,6 @@
 # ETH Information Retrieval 2016, Project 2, Group 11
 
-Michael Merki, Julien Romero, Markus Greiner
+Michael Merki, Markus Greiner
 
 December 12, 2016
 

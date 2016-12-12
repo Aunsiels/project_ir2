@@ -119,7 +119,7 @@ class LanguageModel(idx : PersistentFreqIndex,
 object LanguageModel {
   def main(args: Array[String]): Unit = {
      
-    val options = TipsterOptions(maxDocs = 100000, chopping = -1, useSynonyms = true)
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1, useSynonyms = false)
     val infiles = InputFiles(args)
     val docPath = infiles.DocPath
     val dbPath = infiles.Database
