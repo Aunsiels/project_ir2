@@ -1,7 +1,7 @@
 /**
-@author mmgreiner
-@version
- */
+  * @author mmgreiner
+  * @version
+  */
 
 import ch.ethz.dal.tinyir.processing.{StopWords, TipsterParse}
 import java.io.{InputStream, FileInputStream}
@@ -12,44 +12,46 @@ import com.github.aztek.porterstemmer.PorterStemmer
 import scala.util.{Try, Failure, Success}
 
 
-
 class TipsterParseSmart(is: InputStream,
                         reduceNumbers: Boolean = true,
                         reduceStopWords: Boolean = true,
                         stemming: Boolean = true,
                         chopping: Integer = -1,
-                        ngramSize: Integer = 0) extends TipsterParse(is) {
+                        ngramSize: Integer = 0,
+                        splitLong: Boolean) extends TipsterParse(is) {
 
   def this(is: InputStream, options: TipsterOptions) =
-    this(is, options.numbers, options.stopWords, options.stemming, options.chopping, options.ngramSize)
+    this(is, options.numbers, options.stopWords, options.stemming, options.chopping, options.ngramSize, options.splitLong)
 
   def this(fileName: String, options: TipsterOptions) =
-  this(new FileInputStream(fileName), options)
+    this(new FileInputStream(fileName), options)
 
 
   override def ID = this.name.hashCode()
 
-  override def tokens = TipsterParseSmart.tokenize(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize)
+  override def tokens = TipsterParseSmart.tokenize(content, reduceNumbers, reduceStopWords, stemming, chopping,
+    ngramSize, splitLong)
 
   /**
     * Compute the term frequencies.
+    *
     * @see TipsterParseSmart.tokenize about the options
     * @return a stream of tuples with the token and its frequency
     */
   def termFrequencies: Stream[(String, Int)] = {
-      val tf = collection.mutable.Map[String, Int]()
-      TipsterParseSmart.tokenizer(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize)
-        .foreach(t => {
-          tf += t -> (1 + tf.getOrElse(t, 1))
-        })
-      tf.toStream
+    val tf = collection.mutable.Map[String, Int]()
+    TipsterParseSmart.tokenizer(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize, splitLong)
+      .foreach(t => {
+        tf += t -> (1 + tf.getOrElse(t, 1))
+      })
+    tf.toStream
   }
-  
-  def termFrequency(term: String) : Int = {
-    val tokens = TipsterParseSmart.tokenizer(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize)
-     tokens.count(_.equals(term))
+
+  def termFrequency(term: String): Int = {
+    val tokens = TipsterParseSmart.tokenizer(content, reduceNumbers, reduceStopWords, stemming, chopping, ngramSize, splitLong)
+    tokens.count(_.equals(term))
   }
-  
+
   def getDocumentLength: Int = {
     tokens.length
   }
@@ -75,7 +77,7 @@ class TipsterParseSmart(is: InputStream,
   }
 
   def titleTokens: Array[String] = TipsterParseSmart.tokenizer(title, reduceNumbers, reduceStopWords,
-    stemming, chopping, ngramSize)
+    stemming, chopping, ngramSize, splitLong = splitLong)
 }
 
 
@@ -86,14 +88,17 @@ object TipsterParseSmart {
   val nameHash = collection.mutable.Map[Int, String]()
 
   // regular expressions defined statically
-  val Split = """[ .,;:?!*&$\-+\s\(\)\[\]\{\}_]+"""
+  val Split =
+    """[ .,;:?!*&$\-+\s\(\)\[\]\{\}_'\"\x60]+"""
   val rDate = "^\\d+[/-]\\d+[/-]\\d+$".r -> "<DATE>"
   val rUSPhone = "^\\d{3}\\W\\d+{3}\\W\\d{4}$".r -> "<USPHONE>"
   val rNumber = "^[-]?\\d+([.,]\\d+)*$|^(one|two|three|four)$".r -> "<NUMBER>"
   val rTwoNum = "^\\d+[-/=]\\d+$".r -> "<NUMBER>"
   val rOrdinal = "^\\d+(th|1st|2nd|3rd)$".r -> "<ORDINAL>"
-  val rLine = "--+".r -> ""                   // underlines like -----------
-  val rQuote = """['\"\x60]+""".r -> ""          // also ` = x60
+  val rLine = "--+".r -> ""
+  // underlines like -----------
+  val rQuote =
+    """['\"\x60]+""".r -> "" // also ` = x60
 
   /**
     * Stopwords is taken from nltk toolkit stopwords - english.
@@ -284,12 +289,49 @@ object TipsterParseSmart {
     replace(t, rOrdinal)
   }
 
+  val MidCap = "(.+)([A-Z].*)".r
+  val patIonal = "(.+ionally|.+ional|.+ions?)(.{3,})".r
+  val patIng = "(.+ingly|.+ing|.+iously|.+ious)(.{3,})".r
+  val patThe = "(their|they|there|these|the|those|without|with|was|and|have)(.+)".r
+  val patEd = "(.{4,}ed)(.{4,})".r
 
-  private def tokenizer (text: String, numbers: Boolean, stops: Boolean,
-                         stemming: Boolean, chopping: Int, ngramSize: Int = 0): Array[String] = {
-    val toks = text.split(Split)
+  /**
+    * try to split long words which in most cases have missing blanks and are misspelled
+    * @param word
+    * @return
+    */
+  private def splitLongWords(word: String): Array[String] = {
+    if (word.length <= 15)
+      Array(word)
+    else {
+      word match {
+        case MidCap(front, back) =>
+          // println(s"   $front $back")
+          Array(front, back)
+        case patIonal(front, back) =>
+          // println(s"   - $front $back")
+          Array(front, back)
+        case patIng(front, back) =>
+          // println(s"   / $front $back")
+          Array(front, back)
+        case patThe(front, back) =>
+          // println(s"   + $front $back")
+          Array(front, back)
+        case patEd(front, back) =>
+          // println(s"   e $front $back")
+          Array(front, back)
+        case _ => Array(word)
+      }
+    }
+  }
+
+  private def tokenizer(text: String, numbers: Boolean, stops: Boolean,
+                        stemming: Boolean, chopping: Int, ngramSize: Int = 0, splitLong: Boolean): Array[String] = {
+    val toks0 = text.split(Split)
       .filter(_.length >= 3)
-      .map(x => trim(x.toLowerCase))
+      .flatMap(x => if (splitLong) splitLongWords(x) else Array(x))
+
+    val toks = toks0.map(x => trim(x.toLowerCase))
       .filter(_.length > 0)
       .filterNot(numbers && numberMap(_).startsWith("<"))
       .filterNot(stops && stopMap(_).length == 0)
@@ -304,8 +346,8 @@ object TipsterParseSmart {
   }
 
 
-  def ngrams(text : String, n : Int) : Array[String] = {
-    if (n<1 || text.length<n) Array[String](text)
+  def ngrams(text: String, n: Int): Array[String] = {
+    if (n < 1 || text.length < n) Array[String](text)
     else {
       var ngrams = Array[String]()
       for (ngram <- text.sliding(n)) {
@@ -314,13 +356,13 @@ object TipsterParseSmart {
       ngrams
     }
   }
-      
+
   private def testTokenize(text: String, numbers: Boolean, stops: Boolean, stemming: Boolean, chopping: Int): Array[String] = {
     val a = text.split(Split).filter(_.length >= 3)
     val b = a.map(x => trim(x.toLowerCase))
     val c = b.filter(_.length > 0)
     val d = c.filterNot(numbers && numberMap(_).startsWith("<"))
-    val e = d.filterNot(stops &&  stopMap(_).length == 0)
+    val e = d.filterNot(stops && stopMap(_).length == 0)
     val f = e.map(x => if (stemming) stemMap(x) else x)
     val g = f.filter(_.length > 0)
     val h = g.map(x => if (0 < chopping && chopping < x.length) x.substring(0, chopping) else x)
@@ -331,26 +373,29 @@ object TipsterParseSmart {
 
   /**
     * Tokenizes the given text.
-    * @param text text string to be tokenized
-    * @param numbers if true, remove all dates, numbers or phone numbers
+    *
+    * @param text      text string to be tokenized
+    * @param numbers   if true, remove all dates, numbers or phone numbers
     * @param stopWords if true, remove all stop words
-    * @param stemming if true, perform stemming using PorterStemmer
-    * @param chopping if > 0, truncate tokens to this max length
+    * @param stemming  if true, perform stemming using PorterStemmer
+    * @param chopping  if > 0, truncate tokens to this max length
     * @return a List of tokens
     */
   def tokenize(text: String,
-                numbers: Boolean = true, stopWords: Boolean = true, stemming: Boolean = true, chopping: Int = -1, ngramSize: Int = 0): List[String] =
-    tokenizer(text, numbers, stopWords, stemming, chopping, ngramSize).toList
+               numbers: Boolean = true, stopWords: Boolean = true, stemming: Boolean = true,
+               chopping: Int = -1, ngramSize: Int = 0, splitLong: Boolean = true): List[String] =
+    tokenizer(text, numbers, stopWords, stemming, chopping, ngramSize, splitLong).toList
 
   def tokenize(text: String, options: TipsterOptions): List[String] =
-    tokenizer(text, options.numbers, options.stopWords, options.stemming, options.chopping, options.ngramSize).toList
+    tokenizer(text, options.numbers, options.stopWords, options.stemming,
+      options.chopping, options.ngramSize, options.splitLong).toList
 
-  
+
   def main(args: Array[String]) {
 
     val inf = InputFiles(args)
     val fname = inf.DocPath + "AP880212-0006"
-    
+
     val options = TipsterOptions(maxDocs = 10, ngramSize = 3)
     val parse = new TipsterParseSmart(DocStream.getStream(fname), options)
     val title = parse.title
@@ -359,7 +404,7 @@ object TipsterParseSmart {
     println("Date  = " + parse.date)
     println("tokens = " + parse.tokens)
     println(s"tokenset size ${parse.tokens.toSet.size}")
-    parse.termFrequencies.foreach{
+    parse.termFrequencies.foreach {
       ngram =>
         println(ngram)
     }

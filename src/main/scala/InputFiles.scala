@@ -46,7 +46,7 @@ object InputFiles {
         "queries" -> "C:/Users/Michael/Desktop/IR Data/Project 2/questions-descriptions.txt",
         "relevance" -> "C:/Users/Michael/Desktop/IR Data/Project 2/relevance-judgements.csv"),
     "mmgreiner" ->
-      Map("database" -> "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/databases/FreqIndexDatabase_100000",
+      Map("database" -> "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/databases/FreqIndexDatabase",
         "documents" -> "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/data/documents/",
         "queries" -> "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/data/test-questions.txt",
         "relevance" -> "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/data/relevance-judgements.csv"),

@@ -12,6 +12,12 @@
   * @param chopping
   * @param maxDocs
   */
-case class TipsterOptions(numbers: Boolean = true, stopWords: Boolean = true, stemming: Boolean = true,
-                   chopping: Integer = -1, useSynonyms: Boolean = true, maxDocs: Int = Int.MaxValue, ngramSize: Int = 0)
+case class TipsterOptions(numbers: Boolean = true,
+                          stopWords: Boolean = true,
+                          stemming: Boolean = true,
+                          chopping: Integer = -1,
+                          useSynonyms: Boolean = true,
+                          maxDocs: Int = Int.MaxValue,
+                          ngramSize: Int = 0,
+                          splitLong: Boolean = true)
 

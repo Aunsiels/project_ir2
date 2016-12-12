@@ -29,11 +29,23 @@ object TestQueriesAndPersistency {
     }.toList
   }
 
+  def testTokenzier(inf: InputFiles): Unit = {
+    val options = TipsterOptions(splitLong = true)
+    val t = Timer()
+    for (doc <- new TipsterStreamSmart(inf.DocPath, options).stream) {
+      val tf = doc.termFrequencies
+      t.progress(s"${doc.title}")
+    }
+  }
 
   def main(args: Array[String]): Unit = {
     val inf = InputFiles(args)
 
-    val options = TipsterOptions(maxDocs = 40000)
+    testTokenzier(inf)
+    return
+
+    val options = TipsterOptions(maxDocs = 40000, splitLong = true)
+
     //val fi = new PersistentFreqIndex(inf.DocPath, inf.Database, false, options)
     val queries = QueryParse(inf.Queries, options)
     val relDocs = RelevanceJudgementParse(inf.Relevance)

@@ -148,7 +148,7 @@ object LanguageModel {
     languageModel.computeScoreForQuery(sampleQuery, scoringOptions)*/
     
     val scores = languageModel.getScores(queryParse.queries, scoringOptions)
-    println(scores)
+    //println(scores)
     languageModel.convertScoresToListOfDocNames(scores).foreach{
       tfIdfScore =>
         println("Score for query: " + tfIdfScore._1)
