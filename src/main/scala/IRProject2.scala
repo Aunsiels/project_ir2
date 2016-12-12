@@ -59,9 +59,13 @@ object IRProject2 {
     }
     val input = parseArguments(args)
 
-    println(s"*** building index from ${input.DocPath} into database ${input.Database}")
-    val options = TipsterOptions(chopping = -1, useSynonyms = true /*, maxDocs = 20000*/)
     val forceIndexRecreation = false
+    println(s"*** building index from ${input.DocPath} into database ${input.Database}, forcing $forceIndexRecreation")
+    val options = TipsterOptions(
+      chopping = -1,
+      useSynonyms = true,
+      splitLong = true
+      /*, maxDocs = 20000*/)
 
     val index = new PersistentFreqIndex(input.DocPath, input.Database, forceIndexRecreation, options)
 
