@@ -130,7 +130,7 @@ object LanguageModel {
 
     val relevanceParse = new RelevanceJudgementParse_old(relevancePath)
     val relevance = RelevanceJudgementParse(relevancePath)
-    println(s"${relevance.docs.size} documents to test relevande from $relevancePath")
+    println(s"${relevance.docs.size} documents to test relevance from $relevancePath")
  
     val useIndex = true
     val languageModel = new LanguageModel(persistentIndex, docPath, options, useIndex)
