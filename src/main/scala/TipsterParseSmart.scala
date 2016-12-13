@@ -92,17 +92,14 @@ object TipsterParseSmart {
   val nameHash = collection.mutable.Map[Int, String]()
 
   // regular expressions defined statically
-  val Split =
-    """[ .,;:?!*&$\-+_/\s\(\)\[\]\{\}'\"\x60\n\r]+"""
+  val Split = """[ .,;:?!*&$\-+_/\s\(\)\[\]\{\}'\"\x60\n\r]+"""
   val rDate = "^\\d+[/-]\\d+[/-]\\d+$".r -> "<DATE>"
   val rUSPhone = "^\\d{3}\\W\\d+{3}\\W\\d{4}$".r -> "<USPHONE>"
   val rNumber = "^[-]?\\d+([.,]\\d+)*$|^(one|two|three|four)$".r -> "<NUMBER>"
   val rTwoNum = "^\\d+[-/=]\\d+$".r -> "<NUMBER>"
   val rOrdinal = "^\\d+(th|1st|2nd|3rd)$".r -> "<ORDINAL>"
-  val rLine = "--+".r -> ""
-  // underlines like -----------
-  val rQuote =
-    """['\"\x60]+""".r -> "" // also ` = x60
+  val rLine = "--+".r -> ""     // underlines like -----------
+  val rQuote = """['\"\x60]+""".r -> "" // also ` = x60
 
   /**
     * Stopwords is taken from nltk toolkit stopwords - english.
