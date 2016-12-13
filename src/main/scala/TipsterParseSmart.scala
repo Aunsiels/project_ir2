@@ -92,7 +92,7 @@ object TipsterParseSmart {
   val nameHash = collection.mutable.Map[Int, String]()
 
   // regular expressions defined statically
-  val Split = """[ .,;:?!*&$\-+_/\s\(\)\[\]\{\}'\"\x60\n\r]+"""
+  val Split = """[ .,;:?!*&$\-+_=/\s\(\)\[\]\{\}'\"\x60\n\r]+"""
   val rDate = "^\\d+[/-]\\d+[/-]\\d+$".r -> "<DATE>"
   val rUSPhone = "^\\d{3}\\W\\d+{3}\\W\\d{4}$".r -> "<USPHONE>"
   val rNumber = "^[-]?\\d+([.,]\\d+)*$|^(one|two|three|four)$".r -> "<NUMBER>"
@@ -293,13 +293,17 @@ object TipsterParseSmart {
   val MidCap = "(.+)([A-Z].*)".r
   val patIonal = "(.+ionally|.+ional|.+ions?)(.{3,})".r
   val patIng = "(.+ingly|.+ing|.+iously|.+ious|.+ment)(.{3,})".r
-  val patThe = "(their|they|there|these|the|those|without|with|was|and|have)(.+)".r
+  val patStop = "(their|they|there|these|the|those|without|with|was|and|have)(.+)".r
   val patEd = "(.{4,}ed)(.{4,})".r
   val patAnd = "([Aa]nd)([^aeiory].{3,})".r
-  val patTheS = "([Tt]he)([dhjpvxz].{3,})".r
+  val patThe = "([Tt]he)([dhjpvxz].{3,})".r
+  val patXXX = "(became|\\d{3,})(.{4,})".r
+  val patXXY = "(accounted|composed)(.{2,})".r
+  val patYYY = "(.{4,})(that|which|\\d{3,})".r
 
   var andCount = 0
   var theCount = 0
+  var xxxCount = 0
   var splitCount = 0
   /**
     * try to split long words which in most cases have missing blanks and are misspelled
@@ -309,28 +313,141 @@ object TipsterParseSmart {
   private def splitLongWords(word: String): Array[String] = {
     if (word.length <= 15)
       word match {
-        case patAnd(and, back) =>
-          andCount += 1
-          Array(and, back)
-        case patTheS(the, back) =>
-          theCount += 1
-          Array(the, back)
+        case MidCap(front, back) => splitCount += 1; Array(front, back)
+        case patAnd(and, back) => andCount += 1; Array(and, back)
+        case patThe(the, back) => theCount += 1; Array(the, back)
+        case patXXX(xxx, back) => xxxCount += 1; Array(xxx, back)
+        case patXXY(xxx, back) => xxxCount += 1; Array(xxx, back)
+        case patYYY(front, back) => xxxCount += 1; Array(front, back)
         case _ => Array(word)
       }
-    else {
-      val a = word match {
-        case MidCap(front, back) => Array(front, back)
-        case patIonal(front, back) => Array(front, back)
-        case patIng(front, back) => Array(front, back)
-        case patThe(front, back) => Array(front, back)
-        case patEd(front, back) => Array(front, back)
+    else
+      word match {
+        case patIonal(front, back) => splitCount += 1; Array(front, back)
+        case patIng(front, back)  => splitCount += 1; Array(front, back)
+        case patStop(front, back) => splitCount += 1; Array(front, back)
+        case patEd(front, back)   => splitCount += 1; Array(front, back)
         case _ => Array(word)
       }
-      if (a.length > 1)
-        splitCount += 1
-      a
-    }
   }
+
+  private val StrangeWords = Set("24trip",
+    "286architectur",
+    "305elig",
+    "33938pesticid",
+    "3877feder",
+    "41446west",
+    "46north",
+    "501et",
+    "59supervis",
+    "6563permit",
+    "73005norman",
+    "80386or",
+    "88c08",
+    "95i",
+    """\52\\51\""",
+    "aboutgroundwat",
+    "accountedfor",
+    "actionvideo",
+    "adequateadvertis",
+    "aeronautico",
+    "againstsdi",
+    "aintellig",
+    "aliphaticsatur",
+    "almetermethod",
+    "alwaysthat",
+    "amrevis",
+    "andnov",
+    "anonsystem",
+    "anysubsequ",
+    "apportionthat",
+    "are48",
+    "arizonasen",
+    "asclust",
+    "assetscould",
+    "atequit",
+    "auctionsin",
+    "averagingperiod",
+    "bailoutcould",
+    "basedcriteria",
+    "becamepresid",
+    "beforeestablish",
+    "benderandm",
+    "betweendist",
+    "biolipid",
+    "boardprivaci",
+    "bothcalifornia",
+    "brianpolcari",
+    "buffalony14127",
+    "butchief",
+    "byibc",
+    "cai7",
+    "candidatesregist",
+    "cargoboat",
+    "caulanthu",
+    "certainfunct",
+    "characterread",
+    "chinesetelephon",
+    "citicorpstak",
+    "cleviceswith",
+    "coderun",
+    "comilla",
+    "companiesor",
+    "composedof",
+    "conferencereport",
+    "constitutesfin",
+    "contractsobtain",
+    "cornerthat",
+    "counselind",
+    "cpito",
+    "crowdedrefuge",
+    "customermonei",
+    "danko",
+    "dea4stn",
+    "defaultselect",
+    "demandpro",
+    "device=vegabio",
+    "digeorg",
+    "disclosingor",
+    "distributorform",
+    "domesticationin",
+    "drasticallymost",
+    "duplicatetest",
+    "easementwhen",
+    "effectiveact",
+    "electroniandm",
+    "employerand",
+    "enhanceperform",
+    "equipmentdoor",
+    "etector",
+    "evidencewhatsoev",
+    "existingact",
+    "expresslyth",
+    "factorwhich",
+    "favoritecandid",
+    "ferntre",
+    "filterclog",
+    "firstpay",
+    "flowingtext",
+    "forcehad",
+    "formalsever",
+    "forvoac",
+    "freelyconvert",
+    "fromnowher",
+    "fundreson",
+    "garnerenough",
+    "geneticpattern",
+    "giveiraq",
+    "gordonl",
+    "greatestreturn",
+    "guardrulesout",
+    "hakefisheri",
+    "hasauthor",
+    "hazardsevalu",
+    "helpdoctor",
+    "hidronephrosi",
+    "hisreced",
+    "hopingw")
 
   private def tokenizer(text: String, numbers: Boolean, stops: Boolean,
                         stemming: Boolean, chopping: Int, ngramSize: Int = 0, splitLong: Boolean): Array[String] = {
@@ -346,6 +463,7 @@ object TipsterParseSmart {
       .filter(_.length > 0)
       .map(x => if (0 < chopping && chopping < x.length) x.substring(0, chopping) else x)
       .filter(_.length > 0)
+
     if (ngramSize > 0)
       toks.flatMap(ngrams(_, ngramSize))
     else

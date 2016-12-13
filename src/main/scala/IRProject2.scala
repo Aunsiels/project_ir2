@@ -36,7 +36,7 @@ object IRProject2 {
   def parseArguments(args: Array[String]): (InputFiles, Boolean) = {
     var dataDir = ""
     var queryFile = ""
-    var databaseFile = ""
+    var databaseFile = "database"
     var relevanceFile = ""
     var withoutIndex = false    // repeat also without using the index
 
@@ -92,7 +92,7 @@ object IRProject2 {
 
 
     println("*** models")
-    val scoringOptions = ScoringModelOptions(lambda = 0.2, nDocsToBeReturned = 100, scoringMethod = "TFIDF")
+    val scoringOptions = ScoringModelOptions(lambda = 0.1, nDocsToBeReturned = 100, scoringMethod = "TFIDF")
 
     val results = collection.mutable.Map[String, Map[Int, List[String]]]()
 

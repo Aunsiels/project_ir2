@@ -29,20 +29,22 @@ object TestQueriesAndPersistency {
     }.toList
   }
 
-  def testTokenzier(inf: InputFiles): Unit = {
+  def testTokenizer(inf: InputFiles): Unit = {
+    println(s"reading ${inf.DocPath}")
     val options = TipsterOptions(splitLong = true)
     val t = Timer()
-    for (doc <- new TipsterStreamSmart(inf.DocPath, options).stream.slice(0, 40000)) {
+    for (doc <- new TipsterStreamSmart(inf.DocPath, options).stream) {
       val tf = doc.termFrequencies
-      t.progress(s"${doc.title}")
+      t.progress(s"${doc.name} ${doc.title}")
     }
-    println(s"'and' ${TipsterParseSmart.andCount}, 'the' ${TipsterParseSmart.theCount}, long-words ${TipsterParseSmart.splitCount}")
+    println(s"'and' ${TipsterParseSmart.andCount}, 'the' ${TipsterParseSmart.theCount}, " +
+      s"xxx-words ${TipsterParseSmart.xxxCount}, long-words ${TipsterParseSmart.splitCount}")
   }
 
   def main(args: Array[String]): Unit = {
     val inf = InputFiles(args)
 
-    testTokenzier(inf)
+    testTokenizer(inf)
     return
 
     val options = TipsterOptions(maxDocs = 40000, splitLong = true)
