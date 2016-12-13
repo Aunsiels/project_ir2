@@ -37,7 +37,8 @@ case class QueryParse(fname: String,
   private var tempNum = ""
   private var tempTit = ""
 
-  val wordnet = Wordnet()
+
+  val wordnet: Wordnet = if (options.useSynonyms) Wordnet() else null
 
   def insertQuery(num: String, title: String) = {
     val tit = if (options.useSynonyms) wordnet.expandBySynoyms(title) else title

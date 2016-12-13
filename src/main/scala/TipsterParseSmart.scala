@@ -93,7 +93,7 @@ object TipsterParseSmart {
 
   // regular expressions defined statically
   val Split =
-    """[ .,;:?!*&$\-+\s\(\)\[\]\{\}_'\"\x60]+"""
+    """[ .,;:?!*&$\-+_/\s\(\)\[\]\{\}'\"\x60]+"""
   val rDate = "^\\d+[/-]\\d+[/-]\\d+$".r -> "<DATE>"
   val rUSPhone = "^\\d{3}\\W\\d+{3}\\W\\d{4}$".r -> "<USPHONE>"
   val rNumber = "^[-]?\\d+([.,]\\d+)*$|^(one|two|three|four)$".r -> "<NUMBER>"
@@ -295,10 +295,15 @@ object TipsterParseSmart {
 
   val MidCap = "(.+)([A-Z].*)".r
   val patIonal = "(.+ionally|.+ional|.+ions?)(.{3,})".r
-  val patIng = "(.+ingly|.+ing|.+iously|.+ious)(.{3,})".r
+  val patIng = "(.+ingly|.+ing|.+iously|.+ious|.+ment)(.{3,})".r
   val patThe = "(their|they|there|these|the|those|without|with|was|and|have)(.+)".r
   val patEd = "(.{4,}ed)(.{4,})".r
+  val patAnd = "([Aa]nd)([^aeiory].{3,})".r
+  val patTheS = "([Tt]he)([dhjpvxz].{3,})".r
 
+  var andCount = 0
+  var theCount = 0
+  var splitCount = 0
   /**
     * try to split long words which in most cases have missing blanks and are misspelled
     * @param word
@@ -306,26 +311,30 @@ object TipsterParseSmart {
     */
   private def splitLongWords(word: String): Array[String] = {
     if (word.length <= 15)
-      Array(word)
-    else {
       word match {
-        case MidCap(front, back) =>
-          // println(s"   $front $back")
-          Array(front, back)
-        case patIonal(front, back) =>
-          // println(s"   - $front $back")
-          Array(front, back)
-        case patIng(front, back) =>
-          // println(s"   / $front $back")
-          Array(front, back)
-        case patThe(front, back) =>
-          // println(s"   + $front $back")
-          Array(front, back)
-        case patEd(front, back) =>
-          // println(s"   e $front $back")
-          Array(front, back)
+        case patAnd(and, back) =>
+          andCount += 1
+          Array(and, back)
+        case patTheS(the, back) =>
+          theCount += 1
+          Array(the, back)
         case _ => Array(word)
       }
+    else {
+      val a = word match {
+        case MidCap(front, back) => Array(front, back)
+        case patIonal(front, back) => Array(front, back)
+        case patIng(front, back) => Array(front, back)
+        case patThe(front, back) => Array(front, back)
+        case patEd(front, back) => Array(front, back)
+        case _ => Array(word)
+      }
+      if (a.length > 1) {
+        splitCount += 1
+        if (TipsterParseSmart.logging)
+          println(s"    :: ${a(0)} ${a(1)} ")
+      }
+      a
     }
   }
 
@@ -394,6 +403,8 @@ object TipsterParseSmart {
     tokenizer(text, options.numbers, options.stopWords, options.stemming,
       options.chopping, options.ngramSize, options.splitLong).toList
 
+
+  val logging = true
 
   def main(args: Array[String]) {
 

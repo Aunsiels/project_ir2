@@ -18,17 +18,16 @@ This creates:
 ## Running
 To run:
 
-    $ sbt "run-main IRProject2 data=<data-folder> queries=<query-file> relevance=<relevance-file>"
+    $ sbt "run-main IRProject2 data=<data-folder> queries=<query-file> relevance=<relevance-file> db=<database-folder>"
     
-
 
 
 ## Results
 Upon running the program, it will
 
 
-The result files are called `ir-project-2016-1-11-[nb|lr|lsvm].txt` and they are located under `labelingtestdocs`
+The result files are called `ranking-[tn]-11.run`
 
-The project report is under `ir-2016-1-report-11.pdf` 
+The project report is under `report-11.pdf`
 
 

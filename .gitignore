@@ -38,6 +38,7 @@ data/
 indexDatabase*
 database*/
 .idea_maven/
+temp/
 *.sst
 
 *.run

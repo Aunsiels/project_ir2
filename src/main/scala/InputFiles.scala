@@ -35,9 +35,9 @@ case class InputFiles(args: Array[String] = Array(), documents: String = "", dat
 object InputFiles {
   private val user = System.getProperty("user.name")
 
-  val greinerDir = "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/"
-  val merkiDir = "C:/Users/Michael/Desktop/IR Data/Project 2/"
-  val defaultFiles = Map(
+  private val greinerDir = "/Users/mmgreiner/Projects/InformationRetrieval/project_ir2/"
+  private val merkiDir = "C:/Users/Michael/Desktop/IR Data/Project 2/"
+  private val defaultFiles = Map(
     "Michael" ->
       Map("database" -> "",
         "documents" -> "C:/Users/Michael/Desktop/IR Data/Project 2/documents/",

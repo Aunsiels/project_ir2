@@ -13,6 +13,6 @@ rm ir-practical-2016-2-11.zip
 zip -rX sources.zip build.sbt src wordnet
 unzip -X sources.zip -d sources
 rm sources.zip
-zip -rX ir-practical-2016-2-11.zip sources README.md ranking-t-11.run ranking-n-11.run
+zip -rX ir-practical-2016-2-11.zip sources README.md ranking-l-11.run ranking-t-11.run
 rm -rf sources
 

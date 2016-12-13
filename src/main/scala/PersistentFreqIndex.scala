@@ -59,6 +59,8 @@ class PersistentFreqIndex(path: String, dbPath: String,
     println(s"completed in ${t.elapsed()} secs")
     println(s"head: ${index.head}")
     println(s"size: ${index.size}")
+    println(s" tokenizer split statistics: 'and': ${TipsterParseSmart.andCount}, " +
+      s"'the': ${TipsterParseSmart.theCount}, long-words: ${TipsterParseSmart.splitCount}")
     index
   }
 
