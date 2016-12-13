@@ -312,7 +312,7 @@ object TermBasedModel {
     println(result)
     println(result.size)*/
     
-    var scores = termModel.getScores(queryParse.queries, scoringOptions)
+    val scores = termModel.getScores(queryParse.queries, scoringOptions)
     println(scores)
     termModel.convertScoresToListOfDocNames(scores).foreach{
       tfIdfScore =>

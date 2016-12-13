@@ -323,6 +323,7 @@ object TipsterParseSmart {
       }
     else
       word match {
+        case MidCap(front, back) => splitCount += 1; Array(front, back)
         case patIonal(front, back) => splitCount += 1; Array(front, back)
         case patIng(front, back)  => splitCount += 1; Array(front, back)
         case patStop(front, back) => splitCount += 1; Array(front, back)

@@ -41,8 +41,34 @@ object TestQueriesAndPersistency {
       s"xxx-words ${TipsterParseSmart.xxxCount}, long-words ${TipsterParseSmart.splitCount}")
   }
 
+  def testModel(inf: InputFiles) = {
+    val options = TipsterOptions(maxDocs = 100000, chopping = -1, ngramSize = 0, useSynonyms = false, splitLong = true)
+    val persistentIndex = new PersistentFreqIndex(inf.DocPath, inf.Database, false, options)
+
+    // val queryParse = QueryParse(queryPath, options)
+    val relevance = RelevanceJudgementParse(inf.Relevance)
+
+    val termModel = new TermBasedModel(persistentIndex, inf.DocPath, options, true)
+
+    val scoringOptions = ScoringModelOptions(nDocsToBeReturned = 100, scoringMethod = "TFIDF")
+
+    val relevanceQueries = relevance.docs.map(x => x._1.toString -> x._2)
+    val scores = termModel.getScores(relevanceQueries, scoringOptions)
+    termModel.convertScoresToListOfDocNames(scores).foreach{
+      tfIdfScore =>
+        println("Score for query: " + tfIdfScore._1)
+        println("relevant docs: " + relevance.docs(tfIdfScore._1))
+        println("proposed docs: " + tfIdfScore._2)
+        val stat = Evaluation.getStat(tfIdfScore._2, relevance.docs(tfIdfScore._1), 1)
+        println(stat)
+    }
+
+  }
+
   def main(args: Array[String]): Unit = {
     val inf = InputFiles(args)
+
+    testModel(inf)
 
     testTokenizer(inf)
     return
@@ -70,7 +96,6 @@ object TestQueriesAndPersistency {
       }
 
       println(s"tokens not found: $orphanTokens")
-      TestOne(54, "satellit", relDocs)
     }
       catch {
         case e: DBException => println(e.printStackTrace())
@@ -81,18 +106,4 @@ object TestQueriesAndPersistency {
     println(s"survived")
   }
 
-  def TestOne(queryId: Int, token: String, relDocs: RelevanceJudgementParse): Unit = {
-    val docs89 = getDB(token).sorted
-    val relevance89 = relDocs.docs((queryId)).toSet
-
-    /*val docsSet = docs89.map(x => x.name).toSet
-    val diff2 = relevance89 -- docsSet
-    val diff1 = docsSet -- relevance89
-    val inter = docsSet intersect relevance89
-    println(s"relevant ${relevance89.size}, docs ${docsSet.size}")
-    println(s"docs intersect rel ${inter.size} $inter")
-    println(s"docs - rel ${diff1.size} $diff1")
-    println(s"rel - docs ${diff2.size} $diff2")*/
-
-  }
 }
