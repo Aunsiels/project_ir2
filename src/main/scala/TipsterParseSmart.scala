@@ -93,7 +93,7 @@ object TipsterParseSmart {
 
   // regular expressions defined statically
   val Split =
-    """[ .,;:?!*&$\-+_/\s\(\)\[\]\{\}'\"\x60]+"""
+    """[ .,;:?!*&$\-+_/\s\(\)\[\]\{\}'\"\x60\n\r]+"""
   val rDate = "^\\d+[/-]\\d+[/-]\\d+$".r -> "<DATE>"
   val rUSPhone = "^\\d{3}\\W\\d+{3}\\W\\d{4}$".r -> "<USPHONE>"
   val rNumber = "^[-]?\\d+([.,]\\d+)*$|^(one|two|three|four)$".r -> "<NUMBER>"
@@ -329,11 +329,8 @@ object TipsterParseSmart {
         case patEd(front, back) => Array(front, back)
         case _ => Array(word)
       }
-      if (a.length > 1) {
+      if (a.length > 1)
         splitCount += 1
-        if (TipsterParseSmart.logging)
-          println(s"    :: ${a(0)} ${a(1)} ")
-      }
       a
     }
   }
@@ -411,7 +408,7 @@ object TipsterParseSmart {
     val inf = InputFiles(args)
     val fname = inf.DocPath + "AP880212-0006"
 
-    val options = TipsterOptions(maxDocs = 10, ngramSize = 3)
+    val options = TipsterOptions(maxDocs = 10)
     val parse = new TipsterParseSmart(DocStream.getStream(fname), options)
     val title = parse.title
     println(title)

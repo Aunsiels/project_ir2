@@ -32,10 +32,11 @@ object TestQueriesAndPersistency {
   def testTokenzier(inf: InputFiles): Unit = {
     val options = TipsterOptions(splitLong = true)
     val t = Timer()
-    for (doc <- new TipsterStreamSmart(inf.DocPath, options).stream) {
+    for (doc <- new TipsterStreamSmart(inf.DocPath, options).stream.slice(0, 40000)) {
       val tf = doc.termFrequencies
       t.progress(s"${doc.title}")
     }
+    println(s"'and' ${TipsterParseSmart.andCount}, 'the' ${TipsterParseSmart.theCount}, long-words ${TipsterParseSmart.splitCount}")
   }
 
   def main(args: Array[String]): Unit = {
