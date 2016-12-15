@@ -2,8 +2,10 @@
   * Created by mmgreiner on 07.11.16.
   */
 
+import java.util.Calendar
 import java.util.logging._
-import scala.util.{Try, Failure, Success}
+
+import scala.util.{Failure, Success, Try}
 
 
 case class Timer (step: Integer = 1000, heapInfo: Boolean = false, log: Logger = null) {
@@ -48,6 +50,12 @@ object Timer {
   val log = Logger.getLogger("Timer")
 
   val user = System.getProperty("user.name")
+
+  val now = () => {
+    val now = java.util.Calendar.getInstance()
+    now.get(Calendar.YEAR) + "-" + now.get(Calendar.MONTH) + "-" + now.get(Calendar.DAY_OF_MONTH) +
+      "-" + now.get(Calendar.HOUR) + ":" + now.get(Calendar.MINUTE)
+  }
 
 
 }

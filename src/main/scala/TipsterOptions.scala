@@ -13,6 +13,7 @@
   * @param maxDocs
   */
 case class TipsterOptions(numbers: Boolean = true,
+                          trimming: Boolean = true,
                           stopWords: Boolean = true,
                           stemming: Boolean = true,
                           chopping: Integer = -1,

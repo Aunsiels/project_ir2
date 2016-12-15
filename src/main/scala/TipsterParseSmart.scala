@@ -98,8 +98,12 @@ object TipsterParseSmart {
   val rNumber = "^[-]?\\d+([.,]\\d+)*$|^(one|two|three|four)$".r -> "<NUMBER>"
   val rTwoNum = "^\\d+[-/=]\\d+$".r -> "<NUMBER>"
   val rOrdinal = "^\\d+(th|1st|2nd|3rd)$".r -> "<ORDINAL>"
-  val rLine = "--+".r -> ""     // underlines like -----------
+  val rLine = "--+|##+".r -> " "     // underlines like -----------
   val rQuote = """['\"\x60]+""".r -> "" // also ` = x60
+  val rBackQuote = """\x60""".r -> ""
+  val rHash = """(#\d*)(\w.+)""".r -> ""
+  val patBrutal = """([^A-Za-z]+)(.*)([^\w]*)""".r
+
 
   /**
     * Stopwords is taken from nltk toolkit stopwords - english.
@@ -273,7 +277,16 @@ object TipsterParseSmart {
 
   val rStop = (HighFreqWords ::: StopwordsNltk ::: StopWords.stopWords.toList).toSet.mkString("^(", "|", ")$").r -> ""
 
-  private val replace = (word: String, tup: (util.matching.Regex, String)) => tup._1.replaceAllIn(word, tup._2)
+  private val replace = (word: String, tup: (util.matching.Regex, String)) =>
+    if (word.nonEmpty) tup._1.replaceAllIn(word, tup._2) else ""
+
+  private def trim2(word: String): String = {
+    var res = replace(word, rLine)
+    res = replace(res, rQuote)
+    res = replace(res, rBackQuote)
+    res = replace(res, rHash)
+    res
+  }
 
   // replace lines and quotes right at the beginning. Back-quotes are somewhat tricky, \x60
   private val trim = (word: String) => replace(replace(word, rQuote), rLine).replaceAll("""\x60+""", "")
@@ -296,6 +309,7 @@ object TipsterParseSmart {
   val patStop = "(their|they|there|these|the|those|without|with|was|and|have)(.+)".r
   val patEd = "(.{4,}ed)(.{4,})".r
   val patAnd = "([Aa]nd)([^aeiory].{3,})".r
+  val patCor = "(and[mp])".r
   val patThe = "([Tt]he)([dhjpvxz].{3,})".r
   val patXXX = "(became|\\d{3,})(.{4,})".r
   val patXXY = "(accounted|composed)(.{2,})".r
@@ -311,7 +325,7 @@ object TipsterParseSmart {
     * @return
     */
   private def splitLongWords(word: String): Array[String] = {
-    if (word.length <= 15)
+    val WordMax = 15
       word match {
         case MidCap(front, back) => splitCount += 1; Array(front, back)
         case patAnd(and, back) => andCount += 1; Array(and, back)
@@ -319,15 +333,11 @@ object TipsterParseSmart {
         case patXXX(xxx, back) => xxxCount += 1; Array(xxx, back)
         case patXXY(xxx, back) => xxxCount += 1; Array(xxx, back)
         case patYYY(front, back) => xxxCount += 1; Array(front, back)
-        case _ => Array(word)
-      }
-    else
-      word match {
-        case MidCap(front, back) => splitCount += 1; Array(front, back)
-        case patIonal(front, back) => splitCount += 1; Array(front, back)
-        case patIng(front, back)  => splitCount += 1; Array(front, back)
-        case patStop(front, back) => splitCount += 1; Array(front, back)
-        case patEd(front, back)   => splitCount += 1; Array(front, back)
+        case patCor(_) => andCount += 1; Array("and")
+        case patIonal(front, back) if word.length > WordMax => splitCount += 1; Array(front, back)
+        case patIng(front, back) if word.length > WordMax => splitCount += 1; Array(front, back)
+        case patStop(front, back) if word.length > WordMax => splitCount += 1; Array(front, back)
+        case patEd(front, back) if word.length > WordMax  => splitCount += 1; Array(front, back)
         case _ => Array(word)
       }
   }
@@ -453,13 +463,20 @@ object TipsterParseSmart {
   private def tokenizer(text: String, numbers: Boolean, stops: Boolean,
                         stemming: Boolean, chopping: Int, ngramSize: Int = 0, splitLong: Boolean): Array[String] = {
     val toks0 = text.split(Split)
+        .map(w => w match {
+          case patBrutal(_, x, _) => /*println(s"$x : $w");*/ x
+          case _: String => w
+        })
+        .flatMap(replace(_, rLine).split(" "))
       .filter(_.length >= 3)
       .flatMap(x => if (splitLong) splitLongWords(x) else Array(x))
 
-    val toks = toks0.map(x => trim(x.toLowerCase))
+    val toks = toks0
+      .map(_.toLowerCase)
+      .map(trim2)
       .filter(_.length > 0)
       .filterNot(numbers && numberMap(_).startsWith("<"))
-      .filterNot(stops && stopMap(_).length == 0)
+      .filterNot(stops && stopMap(_).length <= 1)
       .map(x => if (stemming) stemMap(x) else x)
       .filter(_.length > 0)
       .map(x => if (0 < chopping && chopping < x.length) x.substring(0, chopping) else x)
@@ -481,20 +498,6 @@ object TipsterParseSmart {
       }
       ngrams
     }
-  }
-
-  private def testTokenize(text: String, numbers: Boolean, stops: Boolean, stemming: Boolean, chopping: Int): Array[String] = {
-    val a = text.split(Split).filter(_.length >= 3)
-    val b = a.map(x => trim(x.toLowerCase))
-    val c = b.filter(_.length > 0)
-    val d = c.filterNot(numbers && numberMap(_).startsWith("<"))
-    val e = d.filterNot(stops && stopMap(_).length == 0)
-    val f = e.map(x => if (stemming) stemMap(x) else x)
-    val g = f.filter(_.length > 0)
-    val h = g.map(x => if (0 < chopping && chopping < x.length) x.substring(0, chopping) else x)
-      .filter(_.length > 0)
-    val eq = h.deep == b.deep
-    h
   }
 
   /**

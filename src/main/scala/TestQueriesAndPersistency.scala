@@ -4,7 +4,9 @@
 
 import org.iq80.leveldb._
 import org.fusesource.leveldbjni.JniDBFactory._
-import java.io.File
+//import java.io.File
+import java.io._
+import java.util.Calendar
 
 /**
   * Do some test which access levelDB directly to get inverted index, and compare results to given relevance judgements.
@@ -65,12 +67,63 @@ object TestQueriesAndPersistency {
 
   }
 
+  /**
+    * Test the parser with various options
+    * @param inf
+    */
+  def testTipster(inf: InputFiles): Unit = {
+    val date = Timer.now()
+
+    List(TipsterOptions(stopWords = false, stemming = false, useSynonyms = false, splitLong = false),
+      TipsterOptions(stopWords = true, stemming = false, useSynonyms = false, splitLong = false),
+      TipsterOptions(stopWords = true, stemming = false, useSynonyms = false, splitLong = true),
+      TipsterOptions(stopWords = true, stemming = true, useSynonyms = false, splitLong = true),
+      TipsterOptions(stopWords = true, stemming = true, useSynonyms = false, splitLong = false)
+    ).foreach(opt => {
+      println(s"stop ${opt.stopWords}, stem ${opt.stemming}, syn ${opt.useSynonyms}, split ${opt.splitLong}")
+      val t = Timer(step = 2000, heapInfo = true)
+      val termFreq = collection.mutable.Map[String, Int]()
+      var docs = new TipsterStreamSmart(inf.DocPath, opt)
+      for (doc <- docs.stream) {
+        t.progress(s"${doc.name} ${doc.title.slice(0, 60)}")
+        val tf = doc.termFrequencies
+        tf.foreach(t => termFreq += t._1 -> (t._2 + termFreq.getOrElse(t._1, 0)))
+      }
+      // TODO sort by value descending
+      println(s"total terms ${termFreq.size}")
+      var sorted = termFreq.toSeq.sortWith(_._2 > _._2)
+      val elapsed = t.elapsed()
+
+      println(s"time: $elapsed top: ${sorted.slice(0,20)}")
+
+      // Write to file
+      val fname = s"termFreq_${date}_${opt.stopWords}_${opt.stemming}_${opt.useSynonyms}_${opt.splitLong}.txt"
+      println(s"writing $fname")
+      val pw = new PrintWriter(new File(fname))
+      pw.println(s"# $fname ${Calendar.getInstance().toString} total ${termFreq.size} elapsed $elapsed")
+      sorted.foreach(t => pw.println(s"${t._1} ${t._2}"))
+      pw.close()
+      println("completed")
+
+      sorted = null
+      docs = null
+      termFreq.clear
+      System.gc()
+    })
+
+
+
+  }
+
   def main(args: Array[String]): Unit = {
     val inf = InputFiles(args)
 
-    testModel(inf)
+    // testModel(inf)
 
-    testTokenizer(inf)
+    // testTokenizer(inf)
+
+    testTipster(inf)
+
     return
 
     val options = TipsterOptions(maxDocs = 40000, splitLong = true)
